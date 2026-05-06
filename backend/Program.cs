@@ -1,7 +1,23 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+using VisionPaint.Data;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Load local settings if they exist
+var localSettingsPath = Path.Combine(builder.Environment.ContentRootPath, "appsettings.local.json");
+if (File.Exists(localSettingsPath))
+{
+    builder.Configuration.AddJsonFile(localSettingsPath, optional: true, reloadOnChange: true);
+}
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Add Entity Framework Core and PostgreSQL
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
 
 // Add CORS
 builder.Services.AddCors(options =>
