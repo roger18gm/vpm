@@ -38,5 +38,7 @@ app.UseCors("AllowLocalhost");
 app.UseAuthorization();
 app.MapControllers();
 
-var port = 5000;
+// Determine port: Azure uses 8080, local defaults to 5000
+var port = Environment.GetEnvironmentVariable("ASPNETCORE_PORT")
+    ?? (app.Environment.IsProduction() ? "8080" : "5000");
 app.Run($"http://localhost:{port}");
