@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Job>(entity =>
         {
-            entity.ToTable("jobs");
+            entity.ToTable("job");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(200);
