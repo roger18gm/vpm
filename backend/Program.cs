@@ -38,7 +38,21 @@ app.UseCors("AllowLocalhost");
 app.UseAuthorization();
 app.MapControllers();
 
+// Add a simple health check endpoint
+app.MapGet("/api/health", () => new { status = "ok", time = DateTime.UtcNow });
+
 // Determine port: Azure uses 8080, local defaults to 5000
 var port = Environment.GetEnvironmentVariable("ASPNETCORE_PORT")
     ?? (app.Environment.IsProduction() ? "8080" : "5000");
-app.Run($"http://localhost:{port}");
+
+try
+{
+    // Listen on all interfaces (0.0.0.0) for Azure, localhost for local dev
+    var bindAddress = app.Environment.IsProduction() ? "0.0.0.0" : "localhost";
+    app.Run($"http://{bindAddress}:{port}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Fatal error: {ex}");
+    throw;
+}
