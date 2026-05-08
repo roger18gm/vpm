@@ -71,6 +71,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Database PostgreSQL Conventions
 
+Refer to DB.MD in /database
 Use snake_case and singular wording.
 
 ## 6. Backend Practices
@@ -80,6 +81,8 @@ Official dotnet skills: https://github.com/dotnet/skills
 ## 7. Frontend Practices
 
 For any type of complex frontend state management - use Zustand
+
+Do **NOT** use the Supabase client for frontend - database interactions
 
 Style design - https://styles.refero.design/
 
