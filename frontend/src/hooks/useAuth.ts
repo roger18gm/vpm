@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { request, setCsrfToken } from "../lib/api";
 
 export type AuthUser = {
   authUserId: string;
@@ -7,37 +8,15 @@ export type AuthUser = {
   companyRole: string;
   personName: string;
   email: string;
+  csrfToken: string;
 };
 
 export type AuthStatus = {
   isAuthenticated: boolean;
   canBootstrap: boolean;
   user: AuthUser | null;
+  csrfToken: string;
 };
-
-const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
-}
 
 export function useAuth() {
   const [status, setStatus] = useState<AuthStatus | null>(null);
@@ -50,10 +29,12 @@ export function useAuth() {
 
     try {
       const data = await request<AuthStatus>("/auth/status");
+      setCsrfToken(data.csrfToken);
       setStatus(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load auth state.");
-      setStatus({ isAuthenticated: false, canBootstrap: false, user: null });
+      setCsrfToken(null);
+      setStatus({ isAuthenticated: false, canBootstrap: false, user: null, csrfToken: "" });
     } finally {
       setLoading(false);
     }
@@ -68,7 +49,8 @@ export function useAuth() {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    setStatus({ isAuthenticated: true, canBootstrap: false, user });
+    setCsrfToken(user.csrfToken);
+    setStatus({ isAuthenticated: true, canBootstrap: false, user, csrfToken: user.csrfToken });
     return user;
   }, []);
 
@@ -77,13 +59,19 @@ export function useAuth() {
       method: "POST",
       body: JSON.stringify({ name, email, password }),
     });
-    setStatus({ isAuthenticated: true, canBootstrap: false, user });
+    setCsrfToken(user.csrfToken);
+    setStatus({ isAuthenticated: true, canBootstrap: false, user, csrfToken: user.csrfToken });
     return user;
   }, []);
 
   const logout = useCallback(async () => {
-    await request<void>("/auth/logout", { method: "POST", headers: {} });
-    setStatus({ isAuthenticated: false, canBootstrap: false, user: null });
+    try {
+      await request<void>("/auth/logout", { method: "POST" });
+      setStatus({ isAuthenticated: false, canBootstrap: false, user: null, csrfToken: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign out.");
+      throw err;
+    }
   }, []);
 
   return useMemo(

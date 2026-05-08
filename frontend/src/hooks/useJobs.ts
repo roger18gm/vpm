@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { request } from "../lib/api";
 
 export type Job = {
   id: number;
@@ -45,30 +46,6 @@ export type JobInput = {
   closedAt?: string | null;
 };
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
-}
-
 export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,13 +58,11 @@ export function useJobs() {
     try {
       const data = await request<Job[]>("/jobs", {
         method: "GET",
-        headers: {},
       });
       setJobs(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load jobs.");
       setJobs([]);
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -122,11 +97,14 @@ export function useJobs() {
   );
 
   const archiveJob = useCallback(async (id: number) => {
-    await request<void>(`/jobs/${id}`, {
-      method: "DELETE",
-      headers: {},
-    });
-    setJobs((current) => current.filter((job) => job.id !== id));
+    try {
+      await request<void>(`/jobs/${id}`, {
+        method: "DELETE",
+      });
+      setJobs((current) => current.filter((job) => job.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to archive job.");
+    }
   }, []);
 
   return useMemo(

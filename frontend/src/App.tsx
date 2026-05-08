@@ -62,7 +62,7 @@ function Dashboard({ user, onLogout }: { user: NonNullable<ReturnType<typeof use
           <div style={styles.kicker}>VisionPaint</div>
           <h1 style={styles.h1}>Jobs</h1>
         </div>
-        <button style={styles.secondaryButton} onClick={() => void onLogout()}>
+        <button style={styles.secondaryButton} onClick={() => void onLogout().catch(() => {})}>
           Sign out
         </button>
       </header>

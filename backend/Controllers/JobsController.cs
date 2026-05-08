@@ -57,6 +57,19 @@ public sealed class JobsController : ControllerBase
         }
 
         var now = DateTimeOffset.UtcNow;
+        var status = NormalizeStatus(request.Status);
+        var priority = NormalizePriority(request.Priority);
+
+        if (!IsValidStatus(status))
+        {
+            return BadRequest(new { message = "Invalid job status." });
+        }
+
+        if (!IsValidPriority(priority))
+        {
+            return BadRequest(new { message = "Invalid job priority." });
+        }
+
         var job = new Job
         {
             CompanyId = currentUser.CompanyId,
@@ -64,8 +77,8 @@ public sealed class JobsController : ControllerBase
             CreatedByPersonId = currentUser.PersonId,
             Title = request.Title.Trim(),
             Description = request.Description,
-            Status = string.IsNullOrWhiteSpace(request.Status) ? "scheduled" : request.Status,
-            Priority = string.IsNullOrWhiteSpace(request.Priority) ? "normal" : request.Priority,
+            Status = status,
+            Priority = priority,
             AddressLine1 = request.AddressLine1,
             AddressLine2 = request.AddressLine2,
             City = request.City,
@@ -82,6 +95,7 @@ public sealed class JobsController : ControllerBase
             UpdatedAt = now
         };
 
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         _db.Jobs.Add(job);
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -94,6 +108,7 @@ public sealed class JobsController : ControllerBase
             ChangedAt = now
         });
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return CreatedAtAction(nameof(GetJob), new { id = job.Id }, job);
     }
@@ -115,12 +130,24 @@ public sealed class JobsController : ControllerBase
 
         var previousStatus = job.Status;
         var now = DateTimeOffset.UtcNow;
+        var status = NormalizeStatus(request.Status);
+        var priority = NormalizePriority(request.Priority);
+
+        if (!string.IsNullOrWhiteSpace(request.Status) && !IsValidStatus(status))
+        {
+            return BadRequest(new { message = "Invalid job status." });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Priority) && !IsValidPriority(priority))
+        {
+            return BadRequest(new { message = "Invalid job priority." });
+        }
 
         job.ClientId = request.ClientId;
         job.Title = request.Title.Trim();
         job.Description = request.Description;
-        job.Status = string.IsNullOrWhiteSpace(request.Status) ? job.Status : request.Status;
-        job.Priority = string.IsNullOrWhiteSpace(request.Priority) ? job.Priority : request.Priority;
+        job.Status = string.IsNullOrWhiteSpace(request.Status) ? job.Status : status;
+        job.Priority = string.IsNullOrWhiteSpace(request.Priority) ? job.Priority : priority;
         job.AddressLine1 = request.AddressLine1;
         job.AddressLine2 = request.AddressLine2;
         job.City = request.City;
@@ -188,6 +215,36 @@ public sealed class JobsController : ControllerBase
 
         await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "scheduled";
+        }
+
+        return status.Trim().ToLowerInvariant().Replace(' ', '_');
+    }
+
+    private static string NormalizePriority(string? priority)
+    {
+        if (string.IsNullOrWhiteSpace(priority))
+        {
+            return "normal";
+        }
+
+        return priority.Trim().ToLowerInvariant().Replace(' ', '_');
+    }
+
+    private static bool IsValidStatus(string status)
+    {
+        return status is "scheduled" or "in_progress" or "completed" or "cancelled";
+    }
+
+    private static bool IsValidPriority(string priority)
+    {
+        return priority is "low" or "normal" or "high" or "urgent";
     }
 
     private async Task<Job?> LoadJobAsync(int id, CancellationToken cancellationToken)

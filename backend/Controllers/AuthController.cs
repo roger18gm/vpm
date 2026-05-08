@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -17,12 +18,14 @@ public sealed class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IAntiforgery _antiforgery;
     private readonly IPasswordHasher<AuthUser> _passwordHasher;
 
-    public AuthController(AppDbContext db, ICurrentUserService currentUserService, IPasswordHasher<AuthUser> passwordHasher)
+    public AuthController(AppDbContext db, ICurrentUserService currentUserService, IAntiforgery antiforgery, IPasswordHasher<AuthUser> passwordHasher)
     {
         _db = db;
         _currentUserService = currentUserService;
+        _antiforgery = antiforgery;
         _passwordHasher = passwordHasher;
     }
 
@@ -32,6 +35,7 @@ public sealed class AuthController : ControllerBase
     {
         var currentUser = await _currentUserService.GetAsync(cancellationToken);
         var canBootstrap = !await _db.AuthUsers.AnyAsync(cancellationToken);
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
 
         return Ok(new AuthStatusResponse(
             currentUser is not null,
@@ -44,7 +48,9 @@ public sealed class AuthController : ControllerBase
                     currentUser.CompanyId,
                     currentUser.CompanyRole,
                     currentUser.PersonName,
-                    currentUser.Email)));
+                    currentUser.Email,
+                    tokens.RequestToken ?? string.Empty),
+            tokens.RequestToken ?? string.Empty));
     }
 
     [HttpGet("me")]
@@ -57,13 +63,16 @@ public sealed class AuthController : ControllerBase
             return Unauthorized();
         }
 
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+
         return Ok(new AuthenticatedUserResponse(
             currentUser.AuthUserId,
             currentUser.PersonId,
             currentUser.CompanyId,
             currentUser.CompanyRole,
             currentUser.PersonName,
-            currentUser.Email));
+            currentUser.Email,
+            tokens.RequestToken ?? string.Empty));
     }
 
     [HttpPost("login")]
@@ -71,7 +80,7 @@ public sealed class AuthController : ControllerBase
     public async Task<ActionResult<AuthenticatedUserResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var authUser = await _db.AuthUsers.FirstOrDefaultAsync(user => user.Email.ToLower() == normalizedEmail, cancellationToken);
+        var authUser = await _db.AuthUsers.FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
 
         if (authUser is null || !authUser.IsActive)
         {
@@ -95,6 +104,7 @@ public sealed class AuthController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
 
         await SignInAsync(authUser, currentUser);
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
 
         return Ok(new AuthenticatedUserResponse(
             currentUser.AuthUserId,
@@ -102,7 +112,8 @@ public sealed class AuthController : ControllerBase
             currentUser.CompanyId,
             currentUser.CompanyRole,
             currentUser.PersonName,
-            currentUser.Email));
+            currentUser.Email,
+            tokens.RequestToken ?? string.Empty));
     }
 
     [HttpPost("logout")]
@@ -131,7 +142,7 @@ public sealed class AuthController : ControllerBase
         var authUser = new AuthUser
         {
             Id = Guid.NewGuid(),
-            Email = request.Email.Trim(),
+            Email = request.Email.Trim().ToLowerInvariant(),
             PasswordHash = string.Empty,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -168,6 +179,7 @@ public sealed class AuthController : ControllerBase
 
         var currentUser = new CurrentUserContext(authUser.Id, person.Id, company.Id, "owner", person.Name, authUser.Email);
         await SignInAsync(authUser, currentUser);
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
 
         return Ok(new AuthenticatedUserResponse(
             currentUser.AuthUserId,
@@ -175,7 +187,8 @@ public sealed class AuthController : ControllerBase
             currentUser.CompanyId,
             currentUser.CompanyRole,
             currentUser.PersonName,
-            currentUser.Email));
+            currentUser.Email,
+            tokens.RequestToken ?? string.Empty));
     }
 
     private async Task<CurrentUserContext?> LoadCurrentUserAsync(Guid authUserId, CancellationToken cancellationToken)
