@@ -6,6 +6,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisionPaint", "backend\VisionPaint.csproj", "{EF2C8F35-2EF8-DD6B-527D-843656FA35F7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "backend.Tests", "backend.Tests\backend.Tests.csproj", "{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,12 +18,17 @@ Global
 		{EF2C8F35-2EF8-DD6B-527D-843656FA35F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF2C8F35-2EF8-DD6B-527D-843656FA35F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF2C8F35-2EF8-DD6B-527D-843656FA35F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EF2C8F35-2EF8-DD6B-527D-843656FA35F7} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{9A30A21B-B2BB-4D3E-9FD4-5EF2F0E0F801} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {973A1BCF-A78D-4DA7-8F68-7175258C8602}

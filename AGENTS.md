@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Behavioral guidelines to reduce common LLM coding mistakes.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
@@ -78,11 +78,7 @@ Use snake_case and singular wording.
 
 Official dotnet skills: https://github.com/dotnet/skills
 
-## 7. Backend Testing
-
-Backend integration tests for all critical API behavior.
-
-## 8. Frontend Practices
+## 7. Frontend Practices
 
 For any type of complex frontend state management - use Zustand
 
@@ -106,9 +102,11 @@ Icons: https://icones.js.org
 
 React scan: https://github.com/aidenybai/react-scan
 
-React to PDFs (probably don't need this yet but here for reference)" npx pdfx-cli init
+React to PDFs (probably don't need this yet but here for reference): npx pdfx-cli init
 
-## 9. Frontend Testing
+## 8. Testing Practices
+
+Backend integration tests for all critical API behavior.
 
 Playwright for 3 to 5 high-value browser flows.
 

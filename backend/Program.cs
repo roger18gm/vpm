@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,8 +10,16 @@ using VisionPaint.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Logging.ClearProviders();
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Path.GetTempPath(), "VisionPaint", "DataProtectionKeys")))
+        .SetApplicationName("VisionPaint.Tests");
+}
+
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers(options =>
+builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 });
@@ -28,15 +37,17 @@ builder.Services.AddAntiforgery(options =>
     options.HeaderName = "X-CSRF-TOKEN";
 });
 
+var useLocalCookiePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.Cookie.Name = "visionpaint.auth";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = builder.Environment.IsDevelopment()
+        options.Cookie.SameSite = useLocalCookiePolicy
             ? SameSiteMode.Lax
             : SameSiteMode.None;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        options.Cookie.SecurePolicy = useLocalCookiePolicy
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromDays(14);
@@ -76,7 +87,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -84,3 +98,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program
+{
+}

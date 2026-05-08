@@ -14,10 +14,10 @@ public sealed record AuthenticatedUserResponse(
     string CsrfToken);
 
 public sealed record LoginRequest(
-    [property: Required, EmailAddress] string Email,
-    [property: Required] string Password);
+    [Required, EmailAddress] string Email,
+    [Required] string Password);
 
 public sealed record BootstrapRequest(
-    [property: Required] string Name,
-    [property: Required, EmailAddress] string Email,
-    [property: Required] string Password);
+    [Required] string Name,
+    [Required, EmailAddress] string Email,
+    [Required] string Password);
