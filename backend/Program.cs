@@ -1,58 +1,77 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using VisionPaint.Data;
+using VisionPaint.Models;
+using VisionPaint.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load local settings if they exist
-var localSettingsPath = Path.Combine(builder.Environment.ContentRootPath, "appsettings.local.json");
-if (File.Exists(localSettingsPath))
-{
-    builder.Configuration.AddJsonFile(localSettingsPath, optional: true, reloadOnChange: true);
-}
-
-// Add services to the container
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
-// Add Entity Framework Core and PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
-// Add CORS
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "visionpaint.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = builder.Environment.IsDevelopment()
+            ? SameSiteMode.Lax
+            : SameSiteMode.None;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.ExpireTimeSpan = TimeSpan.FromDays(14);
+        options.SlidingExpiration = true;
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    });
+
+var corsOrigins = Environment.GetEnvironmentVariable("VISIONPAINT_CORS_ORIGINS")
+    ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[]
+    {
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173"
+    };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost", policy =>
+    options.AddPolicy("frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "https://visionpainting.web.app")
+        policy.WithOrigins(corsOrigins)
+            .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 app.UseHttpsRedirection();
-app.UseCors("AllowLocalhost");
+app.UseCors("frontend");
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// Add a simple health check endpoint
-app.MapGet("/api/health", () => new { status = "ok", time = DateTime.UtcNow });
-
-// Determine port: Azure uses 8080, local defaults to 5000
-var port = Environment.GetEnvironmentVariable("ASPNETCORE_PORT")
-    ?? (app.Environment.IsProduction() ? "8080" : "5000");
-
-try
-{
-    // Listen on all interfaces (0.0.0.0) for Azure, localhost for local dev
-    var bindAddress = app.Environment.IsProduction() ? "0.0.0.0" : "localhost";
-    app.Run($"http://{bindAddress}:{port}");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Fatal error: {ex}");
-    throw;
-}
+app.Run();

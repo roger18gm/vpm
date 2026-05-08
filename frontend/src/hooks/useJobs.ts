@@ -1,81 +1,144 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-export interface Job {
+export type Job = {
   id: number;
+  companyId: number;
+  clientId: number | null;
+  createdByPersonId: number | null;
   title: string;
-  description?: string;
+  description: string | null;
   status: string;
+  priority: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  stateRegion: string | null;
+  postalCode: string | null;
+  countryCode: string | null;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  dueAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  closedAt: string | null;
   createdAt: string;
-  dueDate?: string;
-}
+  updatedAt: string;
+};
 
-const API_URL = "https://vision-paint-api.azurewebsites.net/api";
+export type JobInput = {
+  clientId?: number | null;
+  title: string;
+  description?: string | null;
+  status?: string;
+  priority?: string;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  stateRegion?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
+  scheduledStartAt?: string | null;
+  scheduledEndAt?: string | null;
+  dueAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  closedAt?: string | null;
+};
+
+const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    ...init,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed with ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
 
 export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const loadJobs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-  const fetchJobs = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/jobs`);
-      if (!response.ok) throw new Error("Failed to fetch jobs");
-      const data = await response.json();
+      const data = await request<Job[]>("/jobs", {
+        method: "GET",
+        headers: {},
+      });
       setJobs(data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : "Unable to load jobs.");
+      setJobs([]);
+      throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createJob = async (job: Omit<Job, "id" | "createdAt">) => {
-    try {
-      const response = await fetch(`${API_URL}/jobs`, {
+  useEffect(() => {
+    void loadJobs();
+  }, [loadJobs]);
+
+  const createJob = useCallback(
+    async (input: JobInput) => {
+      const job = await request<Job>("/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(job),
+        body: JSON.stringify(input),
       });
-      if (!response.ok) throw new Error("Failed to create job");
-      const newJob = await response.json();
-      setJobs([...jobs, newJob]);
-      return newJob;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    }
-  };
+      setJobs((current) => [job, ...current]);
+      return job;
+    },
+    []
+  );
 
-  const updateJob = async (id: number, job: Partial<Job>) => {
-    try {
-      const response = await fetch(`${API_URL}/jobs/${id}`, {
+  const updateJob = useCallback(
+    async (id: number, input: JobInput) => {
+      const job = await request<Job>(`/jobs/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(job),
+        body: JSON.stringify(input),
       });
-      if (!response.ok) throw new Error("Failed to update job");
-      setJobs(jobs.map((j) => (j.id === id ? { ...j, ...job } : j)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    }
-  };
+      setJobs((current) => current.map((existing) => (existing.id === id ? job : existing)));
+      return job;
+    },
+    []
+  );
 
-  const deleteJob = async (id: number) => {
-    try {
-      const response = await fetch(`${API_URL}/jobs/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete job");
-      setJobs(jobs.filter((j) => j.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    }
-  };
+  const archiveJob = useCallback(async (id: number) => {
+    await request<void>(`/jobs/${id}`, {
+      method: "DELETE",
+      headers: {},
+    });
+    setJobs((current) => current.filter((job) => job.id !== id));
+  }, []);
 
-  return { jobs, loading, error, fetchJobs, createJob, updateJob, deleteJob };
+  return useMemo(
+    () => ({
+      jobs,
+      loading,
+      error,
+      reload: loadJobs,
+      createJob,
+      updateJob,
+      archiveJob,
+    }),
+    [archiveJob, createJob, error, jobs, loadJobs, loading, updateJob]
+  );
 }
