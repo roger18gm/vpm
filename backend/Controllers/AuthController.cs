@@ -77,6 +77,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
     public async Task<ActionResult<AuthenticatedUserResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -118,6 +119,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("logout")]
     [Authorize]
+    [IgnoreAntiforgeryToken]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -126,6 +128,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("bootstrap")]
     [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
     public async Task<ActionResult<AuthenticatedUserResponse>> Bootstrap([FromBody] BootstrapRequest request, CancellationToken cancellationToken)
     {
         if (await _db.AuthUsers.AnyAsync(cancellationToken))
