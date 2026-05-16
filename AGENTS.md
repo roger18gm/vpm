@@ -1,5 +1,7 @@
 # AGENTS.md
 
+To understand the project refer to proposal.md
+
 Behavioral guidelines to reduce common LLM coding mistakes.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
@@ -74,13 +76,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 Refer to DB.MD in /database
 Use snake_case and singular wording.
 
-## 6. Backend Practices
+## 6. Backend Practices - C# .net asp net
 
 Official dotnet skills: https://github.com/dotnet/skills
 
-## 7. Frontend Practices
+## 7. Frontend Practices - vuejs
 
-For any type of complex frontend state management - use Zustand
+For any type of complex frontend state management - use Pinia or Zustand
 
 Do **NOT** use the Supabase client for frontend - database interactions
 
@@ -92,7 +94,7 @@ Make videos with html, css, js: https://www.heygen.com/hyperframes
 
 Color palette: red, grey, white, black
 
-charts for React: https://www.tradingview.com/lightweight-charts/
+charts : https://www.tradingview.com/lightweight-charts/
 
 Prefer Temporal API for dates for frontend js
 
