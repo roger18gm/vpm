@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-011 Photos — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900 max-w-md mx-auto border-x border-gray-200">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-011
+  </header>
+
+  <main class="pb-24 p-4">
+    <a href="job-detail.html" class="text-sm text-primary mb-2 inline-block">← Job</a>
+    <h1 class="text-xl font-bold mb-1">Photos</h1>
+    <p class="text-sm text-gray-500 mb-4">Riverside exterior repaint</p>
+
+    <ul class="space-y-4">
+      <li class="flex gap-3 bg-white border border-gray-200 rounded-lg p-3">
+        <div class="w-16 h-16 rounded-md bg-gray-200 shrink-0 flex items-center justify-center text-xs text-gray-400">img</div>
+        <div class="min-w-0 flex-1">
+          <span class="text-xs font-semibold text-primary">Progress</span>
+          <p class="text-sm truncate">North wall — first coat</p>
+          <p class="text-xs text-gray-400">Today, 2:14 PM · You</p>
+        </div>
+      </li>
+      <li class="flex gap-3 bg-white border border-gray-200 rounded-lg p-3">
+        <div class="w-16 h-16 rounded-md bg-gray-200 shrink-0 flex items-center justify-center text-xs text-gray-400">img</div>
+        <div class="min-w-0 flex-1">
+          <span class="text-xs font-semibold text-gray-600">Before</span>
+          <p class="text-sm truncate">Front elevation</p>
+          <p class="text-xs text-gray-400">May 12, 7:05 AM · Maria G.</p>
+        </div>
+      </li>
+      <li class="flex gap-3 bg-white border border-gray-200 rounded-lg p-3">
+        <div class="w-16 h-16 rounded-md bg-gray-200 shrink-0 flex items-center justify-center text-xs text-gray-400">img</div>
+        <div class="min-w-0 flex-1">
+          <span class="text-xs font-semibold text-gray-900">After</span>
+          <p class="text-sm text-gray-400 italic">No caption</p>
+          <p class="text-xs text-gray-400">May 10 · Manager</p>
+        </div>
+      </li>
+    </ul>
+  </main>
+
+  <a href="job-photos-upload.html"
+    class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-primary text-white text-center font-semibold rounded-lg py-3.5 text-sm shadow-lg min-h-[48px] flex items-center justify-center">
+    + Add photo
+  </a>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-012 Upload photo — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900 max-w-md mx-auto border-x border-gray-200">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-012
+  </header>
+
+  <main class="p-4">
+    <a href="job-photos.html" class="text-sm text-primary mb-3 inline-block">← Photos</a>
+    <h1 class="text-xl font-bold mb-6">Add photo</h1>
+
+    <form class="space-y-4" action="#">
+      <label
+        class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-white p-8 min-h-[160px] cursor-pointer">
+        <span class="text-3xl mb-2">📷</span>
+        <span class="text-sm font-semibold">Take photo or choose file</span>
+        <span class="text-xs text-gray-400 mt-1">Camera opens on phone</span>
+        <input type="file" accept="image/*" capture="environment" class="sr-only" />
+      </label>
+
+      <label class="block bg-white border border-gray-200 rounded-lg p-4">
+        <span class="text-xs text-gray-500 mb-1 block">Photo type</span>
+        <select class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]">
+          <option value="progress">Progress</option>
+          <option value="before">Before</option>
+          <option value="after">After</option>
+        </select>
+      </label>
+
+      <label class="block bg-white border border-gray-200 rounded-lg p-4">
+        <span class="text-xs text-gray-500 mb-1 block">Caption (optional)</span>
+        <input type="text" placeholder="e.g. North wall — first coat"
+          class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+      </label>
+
+      <button type="button"
+        class="w-full bg-primary text-white font-semibold rounded-lg py-3.5 text-sm min-h-[48px]">
+        Upload
+      </button>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VisionPaint Wireframes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#991b1b', dark: '#7f1d1d' },
+            surface: '#ffffff',
+            page: '#f4f4f5',
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-page text-gray-900 min-h-screen p-6 md:p-10 font-sans">
+  <div class="max-w-2xl mx-auto">
+    <p class="text-xs uppercase tracking-wide text-primary font-semibold mb-1">VisionPaint</p>
+    <h1 class="text-3xl font-bold mb-2">UI Wireframes</h1>
+    <p class="text-gray-500 mb-8 text-sm">
+      Static HTML prototypes — stakeholder review complete. Canonical spec:
+      <a class="text-primary underline" href="../ui-spec.md">ui-spec.md</a>
+    </p>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8 text-sm text-amber-900">
+      <strong>Wireframe mode.</strong> Placeholder data only. Open crew screens at ~375px width (mobile).
+    </div>
+
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold mb-3">Shared</h2>
+      <ul class="space-y-2">
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="auth.html">SCR-001 Sign in</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold mb-3">Crew (mobile)</h2>
+      <ul class="space-y-2">
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="crew-jobs.html">SCR-005 Jobs list (assigned)</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="crew-clock.html">SCR-010 Clock — not clocked in</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="crew-clock-active.html">SCR-010 Clock — active timer</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="job-detail.html">SCR-007 Job detail</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="job-photos.html">SCR-011 Photo timeline</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="job-photos-upload.html">SCR-012 Upload photo</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-lg font-semibold mb-3">Manager</h2>
+      <ul class="space-y-2">
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="manager-dashboard.html">SCR-003 Dashboard</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="manager-jobs.html">SCR-004 Jobs list (all)</a>
+        </li>
+        <li>
+          <a class="block bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-primary"
+             href="job-create.html">SCR-006 Create job</a>
+        </li>
+      </ul>
+    </section>
+
+    <p class="mt-10 text-xs text-gray-400">Journeys: ../user-journeys.md · Screen map: ../screen-map.md</p>
+  </div>
+</body>
+</html>

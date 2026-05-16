@@ -82,6 +82,10 @@ Official dotnet skills: https://github.com/dotnet/skills
 
 ## 7. Frontend Practices - vuejs
 
+Before building or changing UI screens, read `docs/design/ui-spec.md`, `docs/design/stakeholder-decisions.md`, and `docs/design/components.md`.
+
+frontend libraries or packages should prefer using fixed versions 1.2.3 rather than ^3.2.1
+
 For any type of complex frontend state management - use Pinia or Zustand
 
 Do **NOT** use the Supabase client for frontend - database interactions

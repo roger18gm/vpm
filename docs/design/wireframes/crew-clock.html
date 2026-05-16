@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-010 Clock — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900 max-w-md mx-auto border-x border-gray-200">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-010 · Not clocked in
+  </header>
+
+  <main class="pb-20 p-4">
+    <p class="text-xs uppercase text-primary font-semibold">VisionPaint</p>
+    <h1 class="text-2xl font-bold mb-1">Clock</h1>
+    <p class="text-sm text-gray-500 mb-6">Select a job to clock in</p>
+
+    <section class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+      <h2 class="text-sm font-semibold text-gray-500 mb-3">Assigned jobs</h2>
+      <button type="button" class="w-full text-left border border-primary rounded-lg p-4 mb-2 ring-2 ring-primary/20">
+        <span class="font-semibold block">Riverside exterior repaint</span>
+        <span class="text-xs text-gray-500">124 Oak St</span>
+      </button>
+      <button type="button" class="w-full text-left border border-gray-200 rounded-lg p-4">
+        <span class="font-semibold block">Kitchen &amp; bath — Miller</span>
+        <span class="text-xs text-gray-500">88 Pine Ave</span>
+      </button>
+    </section>
+
+    <button type="button" disabled
+      class="w-full bg-gray-300 text-gray-500 font-semibold rounded-lg py-4 text-base min-h-[52px] cursor-not-allowed">
+      Clock in
+    </button>
+    <p class="text-xs text-gray-400 text-center mt-2">Select a job above first</p>
+  </main>
+
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 flex">
+    <a href="crew-jobs.html" class="flex-1 py-3 text-center text-xs text-gray-500">Jobs</a>
+    <a href="crew-clock.html" class="flex-1 py-3 text-center text-xs font-semibold text-primary border-t-2 border-primary">Clock</a>
+    <a href="#" class="flex-1 py-3 text-center text-xs text-gray-500">Account</a>
+  </nav>
+</body>
+</html>

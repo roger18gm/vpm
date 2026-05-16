@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-003 Dashboard — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-003 · Manager
+  </header>
+
+  <div class="max-w-5xl mx-auto md:flex min-h-screen">
+    <aside class="hidden md:block w-52 bg-white border-r border-gray-200 p-4 shrink-0">
+      <p class="text-xs uppercase text-primary font-semibold mb-4">VisionPaint</p>
+      <nav class="space-y-1 text-sm">
+        <a href="manager-dashboard.html" class="block px-3 py-2 rounded-md bg-primary/10 text-primary font-semibold">Dashboard</a>
+        <a href="manager-jobs.html" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Jobs</a>
+        <a href="#" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Account</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-6 pb-20 md:pb-6">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <p class="text-xs uppercase text-primary font-semibold">VisionPaint</p>
+          <h1 class="text-2xl md:text-3xl font-bold">Dashboard</h1>
+        </div>
+        <a href="job-create.html" class="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-md min-h-[44px] flex items-center">
+          + New job
+        </a>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <article class="bg-white border border-gray-200 rounded-lg p-4">
+          <p class="text-xs text-gray-500">Active</p>
+          <p class="text-2xl font-bold">8</p>
+        </article>
+        <article class="bg-white border border-gray-200 rounded-lg p-4">
+          <p class="text-xs text-gray-500">In progress</p>
+          <p class="text-2xl font-bold">3</p>
+        </article>
+        <article class="bg-white border border-gray-200 rounded-lg p-4">
+          <p class="text-xs text-gray-500">Overdue</p>
+          <p class="text-2xl font-bold text-primary">2</p>
+        </article>
+        <article class="bg-white border border-gray-200 rounded-lg p-4 col-span-2 md:col-span-1">
+          <p class="text-xs text-gray-500">Hours this week</p>
+          <p class="text-2xl font-bold">124</p>
+        </article>
+      </div>
+
+      <section class="bg-white border border-gray-200 rounded-lg p-4">
+        <h2 class="text-sm font-semibold mb-3">Overdue jobs</h2>
+        <ul class="divide-y divide-gray-100">
+          <li>
+            <a href="job-detail.html" class="flex justify-between items-center py-3 gap-2">
+              <div>
+                <p class="font-semibold text-sm">Miller kitchen — touch-up</p>
+                <p class="text-xs text-gray-500">Due May 10</p>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">In progress</span>
+            </a>
+          </li>
+          <li>
+            <a href="job-detail.html" class="flex justify-between items-center py-3 gap-2">
+              <div>
+                <p class="font-semibold text-sm">Warehouse bay 4</p>
+                <p class="text-xs text-gray-500">Due May 8</p>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">Scheduled</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex">
+    <a href="manager-dashboard.html" class="flex-1 py-3 text-center text-xs font-semibold text-primary border-t-2 border-primary">Dashboard</a>
+    <a href="manager-jobs.html" class="flex-1 py-3 text-center text-xs text-gray-500">Jobs</a>
+    <a href="#" class="flex-1 py-3 text-center text-xs text-gray-500">Account</a>
+  </nav>
+</body>
+</html>

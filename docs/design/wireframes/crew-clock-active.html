@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-010 Clock active — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900 max-w-md mx-auto border-x border-gray-200">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-010 · Clocked in
+  </header>
+
+  <main class="pb-20 p-4 flex flex-col items-center">
+    <p class="text-xs uppercase text-primary font-semibold w-full">VisionPaint</p>
+    <h1 class="text-2xl font-bold mb-6 w-full">Clock</h1>
+
+    <section class="w-full bg-white border border-gray-200 rounded-lg p-6 text-center mb-6">
+      <p class="text-sm text-gray-500 mb-1">Working on</p>
+      <h2 class="text-lg font-bold mb-4">Riverside exterior repaint</h2>
+      <p class="text-4xl font-mono font-semibold tabular-nums text-primary">02:14:37</p>
+      <p class="text-xs text-gray-400 mt-2">Started 7:02 AM</p>
+    </section>
+
+    <div class="w-full grid grid-cols-2 gap-3 mb-4">
+      <button type="button" class="border border-gray-300 bg-white rounded-lg py-3 text-sm font-semibold min-h-[44px]">
+        Start break
+      </button>
+      <button type="button" class="border border-gray-200 bg-gray-50 rounded-lg py-3 text-sm text-gray-400 min-h-[44px]" disabled>
+        End break
+      </button>
+    </div>
+
+    <button type="button"
+      class="w-full border-2 border-primary text-primary font-semibold rounded-lg py-4 text-base min-h-[52px]">
+      Clock out
+    </button>
+    <p class="text-xs text-gray-400 mt-3 text-center">You will confirm before clocking out</p>
+  </main>
+
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 flex">
+    <a href="crew-jobs.html" class="flex-1 py-3 text-center text-xs text-gray-500">Jobs</a>
+    <a href="crew-clock-active.html" class="flex-1 py-3 text-center text-xs font-semibold text-primary border-t-2 border-primary relative">
+      Clock
+      <span class="absolute top-2 right-1/4 w-2 h-2 bg-primary rounded-full"></span>
+    </a>
+    <a href="#" class="flex-1 py-3 text-center text-xs text-gray-500">Account</a>
+  </nav>
+</body>
+</html>

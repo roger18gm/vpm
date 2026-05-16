@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-006 Create job — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen font-sans text-gray-900">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All</a> · SCR-006 · Manager
+  </header>
+
+  <div class="max-w-lg mx-auto md:max-w-2xl p-4 pb-8">
+    <a href="manager-jobs.html" class="text-sm text-primary mb-3 inline-block">← Jobs</a>
+    <p class="text-xs uppercase text-primary font-semibold">VisionPaint</p>
+    <h1 class="text-2xl font-bold mb-6">New job</h1>
+
+    <form class="space-y-4" action="#">
+      <fieldset class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <legend class="text-sm font-semibold text-gray-500 px-1">Basics</legend>
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">Job title *</span>
+          <input type="text" placeholder="e.g. Riverside exterior repaint"
+            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">Description</span>
+          <textarea rows="3" placeholder="Scope, notes for crew…"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"></textarea>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">Priority</span>
+            <select class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]">
+              <option>Normal</option>
+              <option>Low</option>
+              <option>High</option>
+              <option>Urgent</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">Status</span>
+            <select class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]">
+              <option>Scheduled</option>
+              <option>In progress</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <legend class="text-sm font-semibold text-gray-500 px-1">Job site</legend>
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">Street address</span>
+          <input type="text" placeholder="124 Oak St"
+            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">City</span>
+            <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+          </label>
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">State</span>
+            <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+          </label>
+        </div>
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">ZIP</span>
+          <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm max-w-[140px] min-h-[44px]" />
+        </label>
+      </fieldset>
+
+      <fieldset class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <legend class="text-sm font-semibold text-gray-500 px-1">Schedule</legend>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">Start date</span>
+            <input type="date" class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+          </label>
+          <label class="block">
+            <span class="text-xs text-gray-500 mb-1 block">Due date</span>
+            <input type="date" class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button"
+          class="flex-1 bg-primary text-white font-semibold rounded-lg py-3 text-sm min-h-[48px]">
+          Save job
+        </button>
+        <a href="manager-jobs.html"
+          class="flex-1 border border-gray-300 bg-white text-center font-semibold rounded-lg py-3 text-sm min-h-[48px] flex items-center justify-center">
+          Cancel
+        </a>
+      </div>
+      <p class="text-xs text-gray-400 text-center">After save → job detail → assign crew</p>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCR-001 Sign in — VisionPaint Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#991b1b' }, page: '#f4f4f5' } } } };
+  </script>
+</head>
+<body class="bg-page min-h-screen flex flex-col font-sans text-gray-900">
+  <header class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 text-center">
+    WIREFRAME · <a href="index.html" class="underline">All screens</a> · SCR-001
+  </header>
+
+  <main class="flex-1 flex items-center justify-center p-4">
+    <section class="w-full max-w-sm bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+      <p class="text-xs uppercase text-primary font-semibold mb-1">VisionPaint</p>
+      <h1 class="text-2xl font-bold mb-6">Sign in</h1>
+
+      <form class="space-y-3" action="#">
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">Email</span>
+          <input type="email" placeholder="you@company.com"
+            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-gray-500 mb-1 block">Password</span>
+          <input type="password" placeholder="Password"
+            class="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm min-h-[44px]" />
+        </label>
+        <button type="button"
+          class="w-full bg-primary text-white font-semibold rounded-md py-2.5 text-sm min-h-[44px]">
+          Sign in
+        </button>
+      </form>
+
+      <p class="mt-4 text-xs text-gray-500 text-center">
+        <a href="#" class="text-primary">First-time setup</a> (bootstrap only)
+      </p>
+    </section>
+  </main>
+</body>
+</html>
