@@ -31,5 +31,6 @@ Do not treat external sites as spec; link chosen patterns in `ui-spec.md` when a
 - [x] Stakeholder review (decisions recorded)
 - [x] Wireframes for all P0 screens
 - [x] Vue component inventory
-- [ ] Implement Vue shell + routes (Week 7+)
-- [ ] Align Tailwind v4 theme with design tokens in app
+- [x] Implement Vue shell + routes
+- [x] Align Tailwind v4 theme with design tokens in app (`frontend/src/styles.css`)
+- [ ] Wire time_entry + job_photo APIs when backend endpoints exist

@@ -14,7 +14,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("X-CSRF-TOKEN", csrfToken);
   }
 
-  if (!headers.has("Content-Type")) {
+  if (!headers.has("Content-Type") && init?.body) {
     headers.set("Content-Type", "application/json");
   }
 
