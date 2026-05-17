@@ -39,32 +39,29 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  /** Re-fetch status so antiforgery cookie + CSRF token stay in sync (required for cross-site POST). */
+  async function refreshSession() {
+    const data = await request<AuthStatus>("/auth/status");
+    applyStatus(data);
+    return data;
+  }
+
   async function login(email: string, password: string) {
-    const loggedIn = await request<AuthUser>("/auth/login", {
+    await request<AuthUser>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    applyStatus({
-      isAuthenticated: true,
-      canBootstrap: false,
-      user: loggedIn,
-      csrfToken: loggedIn.csrfToken,
-    });
-    return loggedIn;
+    const status = await refreshSession();
+    return status.user!;
   }
 
   async function bootstrap(name: string, email: string, password: string) {
-    const loggedIn = await request<AuthUser>("/auth/bootstrap", {
+    await request<AuthUser>("/auth/bootstrap", {
       method: "POST",
       body: JSON.stringify({ name, email, password }),
     });
-    applyStatus({
-      isAuthenticated: true,
-      canBootstrap: false,
-      user: loggedIn,
-      csrfToken: loggedIn.csrfToken,
-    });
-    return loggedIn;
+    const status = await refreshSession();
+    return status.user!;
   }
 
   async function logout() {

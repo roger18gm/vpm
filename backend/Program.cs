@@ -32,12 +32,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
+
+var useLocalCookiePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "visionpaint.antiforgery";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = useLocalCookiePolicy
+        ? SameSiteMode.Lax
+        : SameSiteMode.None;
+    // SameAsRequest: HTTP locally, Secure on HTTPS in Azure (Always breaks plain http://localhost:5000).
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
-
-var useLocalCookiePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -47,9 +55,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = useLocalCookiePolicy
             ? SameSiteMode.Lax
             : SameSiteMode.None;
-        options.Cookie.SecurePolicy = useLocalCookiePolicy
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromDays(14);
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = context =>
