@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using VisionPaint.Data;
 using VisionPaint.Models;
 using VisionPaint.Services;
@@ -19,10 +19,7 @@ if (builder.Environment.IsEnvironment("Testing"))
 }
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
-});
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -33,52 +30,65 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
 
-var useLocalCookiePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+var signingKey = JwtSigningKeyResolver.Resolve(builder.Configuration, builder.Environment);
 
-builder.Services.AddAntiforgery(options =>
-{
-    options.HeaderName = "X-CSRF-TOKEN";
-    options.Cookie.Name = "visionpaint.antiforgery";
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = useLocalCookiePolicy
-        ? SameSiteMode.Lax
-        : SameSiteMode.None;
-    // SameAsRequest: HTTP locally, Secure on HTTPS in Azure (Always breaks plain http://localhost:5000).
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-});
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+    .Configure(options => options.SigningKey = signingKey);
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddSingleton<ITokenService, TokenService>();
+
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+var issuer = string.IsNullOrWhiteSpace(jwtOptions.Issuer) ? "VisionPaint" : jwtOptions.Issuer;
+var audience = string.IsNullOrWhiteSpace(jwtOptions.Audience) ? "VisionPaint" : jwtOptions.Audience;
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        options.Cookie.Name = "visionpaint.auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = useLocalCookiePolicy
-            ? SameSiteMode.Lax
-            : SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.ExpireTimeSpan = TimeSpan.FromDays(14);
-        options.SlidingExpiration = true;
-        options.Events.OnRedirectToLogin = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
-        options.Events.OnRedirectToAccessDenied = context =>
+        options.Events = new JwtBearerEvents
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
+            OnTokenValidated = context =>
+            {
+                var tokenType = context.Principal?.FindFirst("token_type")?.Value;
+                if (string.Equals(tokenType, TokenService.RefreshTokenType, StringComparison.Ordinal))
+                {
+                    context.Fail("Refresh tokens cannot be used for API access.");
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
-var corsOrigins = Environment.GetEnvironmentVariable("VISIONPAINT_CORS_ORIGINS")
-    ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    ?? new[]
-    {
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173"
-    };
+builder.Services.AddAuthorization();
+
+var envCorsOrigins = Environment.GetEnvironmentVariable("VISIONPAINT_CORS_ORIGINS")
+    ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+var configCorsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+
+var corsOrigins = envCorsOrigins is { Length: > 0 }
+    ? envCorsOrigins
+    : configCorsOrigins is { Length: > 0 }
+        ? configCorsOrigins
+        : new[]
+        {
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173"
+        };
 
 builder.Services.AddCors(options =>
 {
@@ -86,8 +96,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(corsOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
     });
 });
 
@@ -97,6 +106,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }
+
+app.UseRouting();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();

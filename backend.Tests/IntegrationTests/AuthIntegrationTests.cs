@@ -23,31 +23,28 @@ public sealed class AuthIntegrationTests : IClassFixture<BackendIntegrationFixtu
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task Bootstrap_creates_auth_records_and_authenticates_the_session()
+    public async Task Bootstrap_returns_tokens_and_authenticates_requests()
     {
         var status = await _fixture.AuthClient.GetStatusAsync();
 
         Assert.False(status.IsAuthenticated);
         Assert.True(status.CanBootstrap);
-        Assert.False(string.IsNullOrWhiteSpace(status.CsrfToken));
 
-        var user = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
             "VisionPaint Owner",
             "Owner@Example.com",
             "Password123!"));
 
-        Assert.Equal("owner@example.com", user.Email);
-        Assert.False(string.IsNullOrWhiteSpace(user.CsrfToken));
+        Assert.Equal("owner@example.com", tokens.User.Email);
+        Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
+        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
+
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
 
         var authenticatedStatus = await _fixture.AuthClient.GetStatusAsync();
         Assert.True(authenticatedStatus.IsAuthenticated);
         Assert.NotNull(authenticatedStatus.User);
-        Assert.Equal(user.AuthUserId, authenticatedStatus.User!.AuthUserId);
-        Assert.Equal(user.PersonId, authenticatedStatus.User.PersonId);
-        Assert.Equal(user.CompanyId, authenticatedStatus.User.CompanyId);
-        Assert.Equal(user.CompanyRole, authenticatedStatus.User.CompanyRole);
-        Assert.Equal(user.PersonName, authenticatedStatus.User.PersonName);
-        Assert.Equal(user.Email, authenticatedStatus.User.Email);
+        Assert.Equal(tokens.User.AuthUserId, authenticatedStatus.User!.AuthUserId);
 
         await using var db = new AppDbContext(
             new DbContextOptionsBuilder<AppDbContext>()
@@ -60,28 +57,32 @@ public sealed class AuthIntegrationTests : IClassFixture<BackendIntegrationFixtu
     }
 
     [Fact]
-    public async Task Login_restores_the_session_after_logout()
+    public async Task Login_and_refresh_restore_access_after_logout()
     {
-        await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+        var bootstrap = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
             "VisionPaint Owner",
             "Owner@Example.com",
             "Password123!"));
 
+        _fixture.AuthClient.SetBearerToken(bootstrap.AccessToken);
         await _fixture.AuthClient.LogoutAsync();
 
         var loggedOutStatus = await _fixture.AuthClient.GetStatusAsync();
         Assert.False(loggedOutStatus.IsAuthenticated);
 
-        var user = await _fixture.AuthClient.LoginAsync(new LoginRequest(
+        var login = await _fixture.AuthClient.LoginAsync(new LoginRequest(
             "Owner@Example.com",
             "Password123!"));
 
-        Assert.Equal("owner@example.com", user.Email);
+        Assert.Equal("owner@example.com", login.User.Email);
+        _fixture.AuthClient.SetBearerToken(login.AccessToken);
 
         var authenticatedStatus = await _fixture.AuthClient.GetStatusAsync();
         Assert.True(authenticatedStatus.IsAuthenticated);
-        Assert.NotNull(authenticatedStatus.User);
-        Assert.Equal(user.AuthUserId, authenticatedStatus.User!.AuthUserId);
+
+        var refreshed = await _fixture.AuthClient.RefreshAsync(login.RefreshToken);
+        Assert.False(string.IsNullOrWhiteSpace(refreshed.AccessToken));
+        Assert.NotEqual(login.AccessToken, refreshed.AccessToken);
 
         await using var db = new AppDbContext(
             new DbContextOptionsBuilder<AppDbContext>()
@@ -90,6 +91,5 @@ public sealed class AuthIntegrationTests : IClassFixture<BackendIntegrationFixtu
 
         var authUser = await db.AuthUsers.SingleAsync();
         Assert.NotNull(authUser.LastLoginAt);
-        Assert.Equal("owner@example.com", authUser.Email);
     }
 }

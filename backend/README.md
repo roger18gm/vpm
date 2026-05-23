@@ -26,18 +26,39 @@ Production CORS defaults are in `appsettings.Production.json` (`visionpainting.w
 
 If login still fails after CORS is fixed, check **Log stream** for database or migration errors (a missing connection string often returns HTTP 500 without CORS headers, which Chrome reports as a CORS error).
 
-**Create/update job returns 400 antiforgery:** The API requires both the `X-CSRF-TOKEN` header and the `visionpaint.antiforgery` cookie on POST. In production both cookies must use `SameSite=None` (configured in `Program.cs` alongside the auth cookie). After deploying, sign out and sign in again so the browser picks up the antiforgery cookie.
+## JWT authentication
+
+The API uses **Bearer JWT** (not cookies). Suited for the Firebase SPA and future mobile clients.
+
+| Setting | Description |
+|---------|-------------|
+| `VISIONPAINT_JWT_SIGNING_KEY` | Required in Azure (min 32 characters). Generate a random secret; never commit it. |
+| `Jwt:Issuer` / `Jwt:Audience` | Optional; default `VisionPaint` |
+
+Endpoints:
+
+- `POST /api/auth/login` → `{ accessToken, refreshToken, accessTokenExpiresAt, user }`
+- `POST /api/auth/refresh` → new token pair
+- `POST /api/auth/logout` → client discards tokens (stateless)
+
+Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`.
 
 ## Run the backend tests
 
 The integration tests use a local PostgreSQL 17 instance and create a disposable test database for each run.
 
 1. Make sure PostgreSQL is running locally.
-2. Set `VISIONPAINT_TEST_PGADMIN` to an admin connection string that can create databases.
-3. Run the test project from the repo root:
+2. Provide `VISIONPAINT_TEST_PGADMIN` (admin connection string that can create databases) using either:
+   - **`backend.Tests/.env`** — copy `backend.Tests/.env.example` to `.env` and set your password (loaded automatically before tests), or
+   - **Shell variable** (overrides `.env` if both are set):
 
 ```powershell
 $env:VISIONPAINT_TEST_PGADMIN='Host=127.0.0.1;Port=5432;Username=postgres;Password=<your-password>;Database=postgres'
+```
+
+3. Run the test project from the repo root:
+
+```powershell
 dotnet test backend.Tests/backend.Tests.csproj --no-restore
 ```
 

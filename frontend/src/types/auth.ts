@@ -5,14 +5,19 @@ export type AuthUser = {
   companyRole: string;
   personName: string;
   email: string;
-  csrfToken: string;
 };
 
 export type AuthStatus = {
   isAuthenticated: boolean;
   canBootstrap: boolean;
   user: AuthUser | null;
-  csrfToken: string;
+};
+
+export type AuthTokenResponse = {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  user: AuthUser;
 };
 
 export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
@@ -20,3 +25,12 @@ export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 export function isManagerRole(role: string | undefined): boolean {
   return role !== undefined && (MANAGER_ROLES as readonly string[]).includes(role);
 }
+
+export type StoredAuth = {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  user: AuthUser;
+};
+
+export const AUTH_STORAGE_KEY = "visionpaint.auth";

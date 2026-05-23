@@ -1,7 +1,3 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +14,19 @@ public sealed class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUserService;
-    private readonly IAntiforgery _antiforgery;
     private readonly IPasswordHasher<AuthUser> _passwordHasher;
+    private readonly ITokenService _tokenService;
 
-    public AuthController(AppDbContext db, ICurrentUserService currentUserService, IAntiforgery antiforgery, IPasswordHasher<AuthUser> passwordHasher)
+    public AuthController(
+        AppDbContext db,
+        ICurrentUserService currentUserService,
+        IPasswordHasher<AuthUser> passwordHasher,
+        ITokenService tokenService)
     {
         _db = db;
         _currentUserService = currentUserService;
-        _antiforgery = antiforgery;
         _passwordHasher = passwordHasher;
+        _tokenService = tokenService;
     }
 
     [HttpGet("status")]
@@ -35,22 +35,11 @@ public sealed class AuthController : ControllerBase
     {
         var currentUser = await _currentUserService.GetAsync(cancellationToken);
         var canBootstrap = !await _db.AuthUsers.AnyAsync(cancellationToken);
-        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
 
         return Ok(new AuthStatusResponse(
             currentUser is not null,
             currentUser is null && canBootstrap,
-            currentUser is null
-                ? null
-                : new AuthenticatedUserResponse(
-                    currentUser.AuthUserId,
-                    currentUser.PersonId,
-                    currentUser.CompanyId,
-                    currentUser.CompanyRole,
-                    currentUser.PersonName,
-                    currentUser.Email,
-                    tokens.RequestToken ?? string.Empty),
-            tokens.RequestToken ?? string.Empty));
+            currentUser is null ? null : ToUserResponse(currentUser)));
     }
 
     [HttpGet("me")]
@@ -58,27 +47,12 @@ public sealed class AuthController : ControllerBase
     public async Task<ActionResult<AuthenticatedUserResponse>> Me(CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetAsync(cancellationToken);
-        if (currentUser is null)
-        {
-            return Unauthorized();
-        }
-
-        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-
-        return Ok(new AuthenticatedUserResponse(
-            currentUser.AuthUserId,
-            currentUser.PersonId,
-            currentUser.CompanyId,
-            currentUser.CompanyRole,
-            currentUser.PersonName,
-            currentUser.Email,
-            tokens.RequestToken ?? string.Empty));
+        return currentUser is null ? Unauthorized() : Ok(ToUserResponse(currentUser));
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [IgnoreAntiforgeryToken]
-    public async Task<ActionResult<AuthenticatedUserResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthTokenResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var authUser = await _db.AuthUsers.FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
@@ -104,32 +78,39 @@ public sealed class AuthController : ControllerBase
         authUser.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        await SignInAsync(authUser, currentUser);
-        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        return Ok(CreateTokenResponse(currentUser));
+    }
 
-        return Ok(new AuthenticatedUserResponse(
-            currentUser.AuthUserId,
-            currentUser.PersonId,
-            currentUser.CompanyId,
-            currentUser.CompanyRole,
-            currentUser.PersonName,
-            currentUser.Email,
-            tokens.RequestToken ?? string.Empty));
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthTokenResponse>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        var authUserId = _tokenService.ValidateRefreshToken(request.RefreshToken);
+        if (authUserId is null)
+        {
+            return Unauthorized(new { message = "Invalid or expired refresh token." });
+        }
+
+        var currentUser = await LoadCurrentUserAsync(authUserId.Value, cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized(new { message = "This account is not linked to an active company membership." });
+        }
+
+        return Ok(CreateTokenResponse(currentUser));
     }
 
     [HttpPost("logout")]
     [Authorize]
-    [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        // Stateless JWT: client discards tokens. Endpoint exists for symmetry and future revocation.
         return NoContent();
     }
 
     [HttpPost("bootstrap")]
     [AllowAnonymous]
-    [IgnoreAntiforgeryToken]
-    public async Task<ActionResult<AuthenticatedUserResponse>> Bootstrap([FromBody] BootstrapRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthTokenResponse>> Bootstrap([FromBody] BootstrapRequest request, CancellationToken cancellationToken)
     {
         if (await _db.AuthUsers.AnyAsync(cancellationToken))
         {
@@ -181,17 +162,28 @@ public sealed class AuthController : ControllerBase
         await transaction.CommitAsync(cancellationToken);
 
         var currentUser = new CurrentUserContext(authUser.Id, person.Id, company.Id, "owner", person.Name, authUser.Email);
-        await SignInAsync(authUser, currentUser);
-        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        return Ok(CreateTokenResponse(currentUser));
+    }
 
-        return Ok(new AuthenticatedUserResponse(
+    private AuthTokenResponse CreateTokenResponse(CurrentUserContext currentUser)
+    {
+        var tokens = _tokenService.CreateTokenPair(currentUser);
+        return new AuthTokenResponse(
+            tokens.AccessToken,
+            tokens.RefreshToken,
+            tokens.AccessTokenExpiresAt,
+            ToUserResponse(currentUser));
+    }
+
+    private static AuthenticatedUserResponse ToUserResponse(CurrentUserContext currentUser)
+    {
+        return new AuthenticatedUserResponse(
             currentUser.AuthUserId,
             currentUser.PersonId,
             currentUser.CompanyId,
             currentUser.CompanyRole,
             currentUser.PersonName,
-            currentUser.Email,
-            tokens.RequestToken ?? string.Empty));
+            currentUser.Email);
     }
 
     private async Task<CurrentUserContext?> LoadCurrentUserAsync(Guid authUserId, CancellationToken cancellationToken)
@@ -230,31 +222,5 @@ public sealed class AuthController : ControllerBase
             membership.Role,
             person.Name,
             authUser.Email);
-    }
-
-    private async Task SignInAsync(AuthUser authUser, CurrentUserContext currentUser)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, authUser.Id.ToString()),
-            new(ClaimTypes.Email, currentUser.Email),
-            new(ClaimTypes.Name, currentUser.PersonName),
-            new("person_id", currentUser.PersonId.ToString()),
-            new("company_id", currentUser.CompanyId.ToString()),
-            new("company_role", currentUser.CompanyRole)
-        };
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            principal,
-            new AuthenticationProperties
-            {
-                IsPersistent = true,
-                AllowRefresh = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(14)
-            });
     }
 }

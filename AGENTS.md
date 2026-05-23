@@ -84,6 +84,8 @@ Official dotnet skills: https://github.com/dotnet/skills
 
 Before building or changing UI screens, read `docs/design/ui-spec.md`, `docs/design/stakeholder-decisions.md`, and `docs/design/components.md`.
 
+API auth is JWT Bearer (`docs/superpowers/specs/2026-05-17-jwt-auth.md`). Do not use cookie credentials or Supabase client on the frontend.
+
 frontend libraries or packages should prefer using fixed versions 1.2.3 rather than ^3.2.1
 
 For any type of complex frontend state management - use Pinia or Zustand

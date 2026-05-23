@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VisionPaint.Models;
 
-public sealed record AuthStatusResponse(bool IsAuthenticated, bool CanBootstrap, AuthenticatedUserResponse? User, string CsrfToken);
+public sealed record AuthStatusResponse(bool IsAuthenticated, bool CanBootstrap, AuthenticatedUserResponse? User);
 
 public sealed record AuthenticatedUserResponse(
     Guid AuthUserId,
@@ -10,8 +10,13 @@ public sealed record AuthenticatedUserResponse(
     int CompanyId,
     string CompanyRole,
     string PersonName,
-    string Email,
-    string CsrfToken);
+    string Email);
+
+public sealed record AuthTokenResponse(
+    string AccessToken,
+    string RefreshToken,
+    DateTimeOffset AccessTokenExpiresAt,
+    AuthenticatedUserResponse User);
 
 public sealed record LoginRequest(
     [Required, EmailAddress] string Email,
@@ -21,3 +26,6 @@ public sealed record BootstrapRequest(
     [Required] string Name,
     [Required, EmailAddress] string Email,
     [Required] string Password);
+
+public sealed record RefreshTokenRequest(
+    [Required] string RefreshToken);

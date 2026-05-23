@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using VisionPaint.Models;
 
@@ -23,38 +24,39 @@ public sealed class TestAuthClient
         return status;
     }
 
-    public async Task<AuthenticatedUserResponse> BootstrapAsync(BootstrapRequest request, CancellationToken cancellationToken = default)
+    public async Task<AuthTokenResponse> BootstrapAsync(BootstrapRequest request, CancellationToken cancellationToken = default)
     {
-        await EnsureCsrfTokenAsync(cancellationToken);
-        return await SendAsync<AuthenticatedUserResponse>("/api/auth/bootstrap", request, cancellationToken);
+        return await SendAsync<AuthTokenResponse>("/api/auth/bootstrap", request, cancellationToken);
     }
 
-    public async Task<AuthenticatedUserResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<AuthTokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        await EnsureCsrfTokenAsync(cancellationToken);
-        return await SendAsync<AuthenticatedUserResponse>("/api/auth/login", request, cancellationToken);
+        return await SendAsync<AuthTokenResponse>("/api/auth/login", request, cancellationToken);
+    }
+
+    public async Task<AuthTokenResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<AuthTokenResponse>("/api/auth/refresh", new RefreshTokenRequest(refreshToken), cancellationToken);
     }
 
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
-        await EnsureCsrfTokenAsync(cancellationToken);
         using var response = await _client.PostAsync("/api/auth/logout", null, cancellationToken);
         response.EnsureSuccessStatusCode();
+        SetBearerToken(null);
     }
 
-    public Task RefreshCsrfTokenAsync(CancellationToken cancellationToken = default)
+    public void SetBearerToken(string? accessToken)
     {
-        return EnsureCsrfTokenAsync(cancellationToken);
+        _client.DefaultRequestHeaders.Authorization = string.IsNullOrWhiteSpace(accessToken)
+            ? null
+            : new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private async Task EnsureCsrfTokenAsync(CancellationToken cancellationToken)
+    public async Task AuthenticateAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var status = await GetStatusAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(status.CsrfToken))
-        {
-            _client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-            _client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", status.CsrfToken);
-        }
+        var tokens = await LoginAsync(request, cancellationToken);
+        SetBearerToken(tokens.AccessToken);
     }
 
     private async Task<T> SendAsync<T>(string path, object body, CancellationToken cancellationToken)

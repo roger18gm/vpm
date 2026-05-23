@@ -26,12 +26,12 @@ public sealed class JobsIntegrationTests : IClassFixture<BackendIntegrationFixtu
     [Fact]
     public async Task CreateJob_normalizes_fields_and_writes_status_history()
     {
-        await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
             "VisionPaint Owner",
             "Owner@Example.com",
             "Password123!"));
 
-        await _fixture.AuthClient.RefreshCsrfTokenAsync();
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
 
         var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new Job
         {

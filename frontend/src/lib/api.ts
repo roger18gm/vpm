@@ -1,17 +1,25 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
 
-let csrfToken: string | null = null;
+let accessToken: string | null = null;
+let refreshHandler: (() => Promise<boolean>) | null = null;
 
-export function setCsrfToken(token: string | null) {
-  csrfToken = token && token.length > 0 ? token : null;
+export function setAccessToken(token: string | null) {
+  accessToken = token && token.length > 0 ? token : null;
 }
 
-export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
+export function getAccessToken() {
+  return accessToken;
+}
+
+export function setRefreshHandler(handler: (() => Promise<boolean>) | null) {
+  refreshHandler = handler;
+}
+
+export async function request<T>(path: string, init?: RequestInit, allowRetry = true): Promise<T> {
   const headers = new Headers(init?.headers);
 
-  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && csrfToken) {
-    headers.set("X-CSRF-TOKEN", csrfToken);
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
   if (!headers.has("Content-Type") && init?.body) {
@@ -19,10 +27,16 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const response = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
     ...init,
     headers,
   });
+
+  if (response.status === 401 && allowRetry && refreshHandler && !path.includes("/auth/login") && !path.includes("/auth/refresh")) {
+    const refreshed = await refreshHandler();
+    if (refreshed) {
+      return request<T>(path, init, false);
+    }
+  }
 
   if (!response.ok) {
     const message = await response.text();
