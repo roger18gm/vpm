@@ -27,5 +27,6 @@ UI behavior and routes: [../docs/design/ui-spec.md](../docs/design/ui-spec.md)
 - `npm run dev` — local dev server (port 5173)
 - `npm run build` — production build to `dist/`
 - `npm run preview` — preview production build
+- `npm run test:e2e` — Playwright browser tests (requires API + dev server; see `.github/workflows/e2e-ui.yml`)
 
 Deployed via Firebase Hosting (`firebase.json`).

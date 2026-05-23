@@ -10,6 +10,9 @@ using VisionPaint.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var isCiTestEnvironment = builder.Environment.IsEnvironment("Testing")
+    || builder.Environment.IsEnvironment("E2E");
+
 if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.Logging.ClearProviders();
@@ -102,7 +105,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-if (!app.Environment.IsEnvironment("Testing"))
+if (!isCiTestEnvironment)
 {
     app.UseHttpsRedirection();
 }

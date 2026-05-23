@@ -43,6 +43,15 @@ Endpoints:
 
 Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`.
 
+## CI test prerequisites
+
+GitHub Actions backend integration tests and UI E2E tests expect:
+
+- a PostgreSQL 17 service container
+- a `CI_POSTGRES_PASSWORD` GitHub secret
+- backend CI sets `VISIONPAINT_TEST_PGADMIN` from that secret
+- UI E2E applies SQL migrations and starts the API with `ASPNETCORE_ENVIRONMENT=E2E`
+
 ## Run the backend tests
 
 The integration tests use a local PostgreSQL 17 instance and create a disposable test database for each run.

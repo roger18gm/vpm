@@ -1,5 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
+# This workflow remains focused on backend publish and deployment.
+# Backend CI and UI E2E checks are handled by separate workflows.
 
 name: Build and deploy ASP.Net Core app to Azure Web App - vision-paint-api
 

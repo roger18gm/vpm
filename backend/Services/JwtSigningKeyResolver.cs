@@ -17,6 +17,11 @@ public static class JwtSigningKeyResolver
             signingKey = "visionpaint-test-signing-key-32chars-min!!";
         }
 
+        if (string.IsNullOrWhiteSpace(signingKey) && environment.IsEnvironment("E2E"))
+        {
+            signingKey = "visionpaint-e2e-signing-key-32chars-min!!";
+        }
+
         if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
         {
             throw new InvalidOperationException(
