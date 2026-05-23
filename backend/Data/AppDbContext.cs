@@ -12,6 +12,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     public DbSet<Company> Companies => Set<Company>();
 
     public DbSet<Person> People => Set<Person>();
@@ -39,6 +41,22 @@ public sealed class AppDbContext : DbContext
             entity.Property(user => user.CreatedAt).HasColumnName("created_at");
             entity.Property(user => user.UpdatedAt).HasColumnName("updated_at");
             entity.HasIndex(user => user.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("refresh_token");
+            entity.HasKey(token => token.Id);
+            entity.Property(token => token.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(token => token.AuthUserId).HasColumnName("auth_user_id");
+            entity.Property(token => token.SessionId).HasColumnName("session_id");
+            entity.Property(token => token.TokenId).HasColumnName("token_id");
+            entity.Property(token => token.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(token => token.CreatedAt).HasColumnName("created_at");
+            entity.Property(token => token.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(token => token.RevokeReason).HasColumnName("revoke_reason");
+            entity.Property(token => token.ReplacedByTokenId).HasColumnName("replaced_by_token_id");
+            entity.HasIndex(token => token.TokenId).IsUnique();
         });
 
         modelBuilder.Entity<Company>(entity =>

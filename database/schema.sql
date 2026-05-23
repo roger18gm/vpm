@@ -26,6 +26,21 @@ create table if not exists person (
 create index if not exists person_auth_user_id_idx on person (auth_user_id);
 create index if not exists person_email_idx on person (email);
 
+create table if not exists refresh_token (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null references auth_user (id) on delete cascade,
+  session_id uuid not null,
+  token_id uuid not null unique,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  revoke_reason text,
+  replaced_by_token_id uuid
+);
+
+create index if not exists refresh_token_auth_user_id_idx on refresh_token (auth_user_id);
+create index if not exists refresh_token_session_id_idx on refresh_token (session_id);
+
 create table if not exists company_member (
   company_id integer not null references company (id) on delete cascade,
   person_id integer not null references person (id) on delete cascade,

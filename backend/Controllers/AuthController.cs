@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using VisionPaint.Data;
 using VisionPaint.Models;
 using VisionPaint.Services;
@@ -78,7 +80,7 @@ public sealed class AuthController : ControllerBase
         authUser.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return Ok(CreateTokenResponse(currentUser));
+        return Ok(await CreateTokenResponseAsync(currentUser, Guid.NewGuid(), cancellationToken));
     }
 
     [HttpPost("refresh")]
@@ -91,20 +93,49 @@ public sealed class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid or expired refresh token." });
         }
 
-        var currentUser = await LoadCurrentUserAsync(authUserId.Value, cancellationToken);
+        var storedToken = await _db.RefreshTokens
+            .FirstOrDefaultAsync(token =>
+                token.AuthUserId == authUserId.AuthUserId
+                && token.SessionId == authUserId.SessionId
+                && token.TokenId == authUserId.TokenId,
+                cancellationToken);
+
+        if (storedToken is null || storedToken.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            return Unauthorized(new { message = "Invalid or expired refresh token." });
+        }
+
+        if (storedToken.RevokedAt is not null || storedToken.ReplacedByTokenId is not null)
+        {
+            await RevokeRefreshTokenSessionAsync(
+                authUserId.AuthUserId,
+                authUserId.SessionId,
+                "refresh_token_reuse",
+                cancellationToken);
+            return Unauthorized(new { message = "Invalid or expired refresh token." });
+        }
+
+        var currentUser = await LoadCurrentUserAsync(authUserId.AuthUserId, cancellationToken);
         if (currentUser is null)
         {
             return Unauthorized(new { message = "This account is not linked to an active company membership." });
         }
 
-        return Ok(CreateTokenResponse(currentUser));
+        return Ok(await RotateRefreshTokenAsync(currentUser, storedToken, cancellationToken));
     }
 
     [HttpPost("logout")]
     [Authorize]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        // Stateless JWT: client discards tokens. Endpoint exists for symmetry and future revocation.
+        var authUserIdText = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var sessionIdText = User.FindFirstValue(TokenService.SessionIdClaimType);
+
+        if (Guid.TryParse(authUserIdText, out var authUserId) && Guid.TryParse(sessionIdText, out var sessionId))
+        {
+            await RevokeRefreshTokenSessionAsync(authUserId, sessionId, "logout", cancellationToken);
+        }
+
         return NoContent();
     }
 
@@ -162,12 +193,55 @@ public sealed class AuthController : ControllerBase
         await transaction.CommitAsync(cancellationToken);
 
         var currentUser = new CurrentUserContext(authUser.Id, person.Id, company.Id, "owner", person.Name, authUser.Email);
-        return Ok(CreateTokenResponse(currentUser));
+        return Ok(await CreateTokenResponseAsync(currentUser, Guid.NewGuid(), cancellationToken));
     }
 
-    private AuthTokenResponse CreateTokenResponse(CurrentUserContext currentUser)
+    private async Task<AuthTokenResponse> CreateTokenResponseAsync(
+        CurrentUserContext currentUser,
+        Guid sessionId,
+        CancellationToken cancellationToken)
     {
-        var tokens = _tokenService.CreateTokenPair(currentUser);
+        var tokens = _tokenService.CreateTokenPair(currentUser, sessionId);
+        _db.RefreshTokens.Add(new RefreshToken
+        {
+            AuthUserId = currentUser.AuthUserId,
+            SessionId = tokens.SessionId,
+            TokenId = tokens.RefreshTokenId,
+            ExpiresAt = tokens.RefreshTokenExpiresAt,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return new AuthTokenResponse(
+            tokens.AccessToken,
+            tokens.RefreshToken,
+            tokens.AccessTokenExpiresAt,
+            ToUserResponse(currentUser));
+    }
+
+    private async Task<AuthTokenResponse> RotateRefreshTokenAsync(
+        CurrentUserContext currentUser,
+        RefreshToken replacedToken,
+        CancellationToken cancellationToken)
+    {
+        var tokens = _tokenService.CreateTokenPair(currentUser, replacedToken.SessionId);
+        var now = DateTimeOffset.UtcNow;
+
+        replacedToken.RevokedAt = now;
+        replacedToken.RevokeReason = "rotated";
+        replacedToken.ReplacedByTokenId = tokens.RefreshTokenId;
+
+        _db.RefreshTokens.Add(new RefreshToken
+        {
+            AuthUserId = currentUser.AuthUserId,
+            SessionId = tokens.SessionId,
+            TokenId = tokens.RefreshTokenId,
+            ExpiresAt = tokens.RefreshTokenExpiresAt,
+            CreatedAt = now
+        });
+
+        await _db.SaveChangesAsync(cancellationToken);
+
         return new AuthTokenResponse(
             tokens.AccessToken,
             tokens.RefreshToken,
@@ -213,7 +287,12 @@ public sealed class AuthController : ControllerBase
 
         var authUser = await _db.AuthUsers
             .AsNoTracking()
-            .FirstAsync(user => user.Id == authUserId && user.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(user => user.Id == authUserId && user.IsActive, cancellationToken);
+
+        if (authUser is null)
+        {
+            return null;
+        }
 
         return new CurrentUserContext(
             authUser.Id,
@@ -222,5 +301,30 @@ public sealed class AuthController : ControllerBase
             membership.Role,
             person.Name,
             authUser.Email);
+    }
+
+    private async Task RevokeRefreshTokenSessionAsync(
+        Guid authUserId,
+        Guid sessionId,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var tokens = await _db.RefreshTokens
+            .Where(token => token.AuthUserId == authUserId && token.SessionId == sessionId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        if (tokens.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens)
+        {
+            token.RevokedAt = now;
+            token.RevokeReason = reason;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -10,6 +10,7 @@ namespace VisionPaint.Services;
 public sealed class TokenService : ITokenService
 {
     public const string RefreshTokenType = "refresh";
+    public const string SessionIdClaimType = "session_id";
     private readonly JwtOptions _options;
     private readonly SymmetricSecurityKey _signingKey;
 
@@ -24,15 +25,17 @@ public sealed class TokenService : ITokenService
         _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
     }
 
-    public AuthTokenPair CreateTokenPair(CurrentUserContext user)
+    public AuthTokenPair CreateTokenPair(CurrentUserContext user, Guid sessionId)
     {
         var accessExpires = DateTimeOffset.UtcNow.AddMinutes(_options.AccessTokenMinutes);
-        var accessToken = CreateJwt(user, accessExpires, tokenType: "access");
-        var refreshToken = CreateJwt(user, DateTimeOffset.UtcNow.AddDays(_options.RefreshTokenDays), tokenType: RefreshTokenType);
-        return new AuthTokenPair(accessToken, refreshToken, accessExpires);
+        var refreshExpires = DateTimeOffset.UtcNow.AddDays(_options.RefreshTokenDays);
+        var refreshTokenId = Guid.NewGuid();
+        var accessToken = CreateJwt(user, accessExpires, sessionId, tokenId: Guid.NewGuid(), tokenType: "access");
+        var refreshToken = CreateJwt(user, refreshExpires, sessionId, refreshTokenId, tokenType: RefreshTokenType);
+        return new AuthTokenPair(accessToken, refreshToken, accessExpires, sessionId, refreshTokenId, refreshExpires);
     }
 
-    public Guid? ValidateRefreshToken(string refreshToken)
+    public RefreshTokenValidationResult? ValidateRefreshToken(string refreshToken)
     {
         if (!TryValidateToken(refreshToken, out var principal))
         {
@@ -46,10 +49,17 @@ public sealed class TokenService : ITokenService
         }
 
         var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(sub, out var authUserId) ? authUserId : null;
+        var sessionId = principal.FindFirstValue(SessionIdClaimType);
+        var tokenId = principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
+
+        return Guid.TryParse(sub, out var authUserId)
+               && Guid.TryParse(sessionId, out var parsedSessionId)
+               && Guid.TryParse(tokenId, out var parsedTokenId)
+            ? new RefreshTokenValidationResult(authUserId, parsedSessionId, parsedTokenId)
+            : null;
     }
 
-    private string CreateJwt(CurrentUserContext user, DateTimeOffset expires, string tokenType)
+    private string CreateJwt(CurrentUserContext user, DateTimeOffset expires, Guid sessionId, Guid tokenId, string tokenType)
     {
         var claims = new List<Claim>
         {
@@ -59,8 +69,9 @@ public sealed class TokenService : ITokenService
             new("person_id", user.PersonId.ToString()),
             new("company_id", user.CompanyId.ToString()),
             new("company_role", user.CompanyRole),
+            new(SessionIdClaimType, sessionId.ToString()),
             new("token_type", tokenType),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
+            new(JwtRegisteredClaimNames.Jti, tokenId.ToString())
         };
 
         var credentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);

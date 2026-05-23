@@ -103,8 +103,19 @@ export const useAuthStore = defineStore("auth", () => {
       if (stored) {
         refreshToken.value = stored.refreshToken;
         if (isAccessTokenValid(stored.accessTokenExpiresAt)) {
-          setAccessToken(stored.accessToken);
-          applyStatus({ isAuthenticated: true, canBootstrap: false, user: stored.user });
+          const cachedAccessToken = stored.accessToken;
+          setAccessToken(cachedAccessToken);
+
+          const currentUser = await request<AuthUser>("/auth/me");
+          applyStatus({ isAuthenticated: true, canBootstrap: false, user: currentUser });
+
+          if (getAccessToken() === cachedAccessToken) {
+            saveStoredAuth({
+              ...stored,
+              user: currentUser,
+            });
+          }
+
           return;
         }
 
@@ -114,11 +125,7 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       const data = await request<AuthStatus>("/auth/status");
-      if (data.isAuthenticated && getAccessToken()) {
-        applyStatus(data);
-      } else {
-        applyStatus(data);
-      }
+      applyStatus(data);
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Unable to load session.";
       clearSession();

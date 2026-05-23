@@ -14,7 +14,7 @@ If you run with `ASPNETCORE_ENVIRONMENT=Production` locally, use HTTPS or cookie
 
 ## Azure production (vision-paint-api)
 
-The Firebase app (`https://visionpainting.web.app`) calls this API cross-origin with cookies. After deploying, confirm in **Azure Portal → vision-paint-api → Configuration → Application settings**:
+The Firebase app (`https://visionpainting.web.app`) calls this API cross-origin with cookies. After deploying, confirm in **Azure Portal -> vision-paint-api -> Configuration -> Application settings**:
 
 | Setting | Example |
 |---------|---------|
@@ -37,9 +37,9 @@ The API uses **Bearer JWT** (not cookies). Suited for the Firebase SPA and futur
 
 Endpoints:
 
-- `POST /api/auth/login` → `{ accessToken, refreshToken, accessTokenExpiresAt, user }`
-- `POST /api/auth/refresh` → new token pair
-- `POST /api/auth/logout` → client discards tokens (stateless)
+- `POST /api/auth/login` -> `{ accessToken, refreshToken, accessTokenExpiresAt, user }`
+- `POST /api/auth/refresh` -> new token pair, rotating the refresh token
+- `POST /api/auth/logout` -> revokes the active refresh-token session and the client discards tokens
 
 Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`.
 
@@ -49,7 +49,7 @@ The integration tests use a local PostgreSQL 17 instance and create a disposable
 
 1. Make sure PostgreSQL is running locally.
 2. Provide `VISIONPAINT_TEST_PGADMIN` (admin connection string that can create databases) using either:
-   - **`backend.Tests/.env`** — copy `backend.Tests/.env.example` to `.env` and set your password (loaded automatically before tests), or
+   - **`backend.Tests/.env`** - copy `backend.Tests/.env.example` to `.env` and set your password (loaded automatically before tests), or
    - **Shell variable** (overrides `.env` if both are set):
 
 ```powershell
