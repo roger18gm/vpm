@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
+    "postinstall": "playwright install chromium",
+    "test:e2e:prepare-db": "node --experimental-strip-types ./tests/e2e/prepare-database-runner.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -18,6 +20,9 @@
   },
   "devDependencies": {
     "@playwright/test": "1.52.0",
+    "@types/node": "22.15.21",
+    "@types/pg": "8.15.4",
+    "pg": "8.16.0",
     "@tailwindcss/vite": "4.1.4",
     "@vitejs/plugin-vue": "5.2.1",
     "tailwindcss": "4.1.4",

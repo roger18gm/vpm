@@ -25,6 +25,46 @@ function isAccessTokenValid(expiresAt: string) {
   return new Date(expiresAt).getTime() > Date.now() + 30_000;
 }
 
+function readString(record: Record<string, unknown>, camel: string, pascal: string) {
+  const value = record[camel] ?? record[pascal];
+  return typeof value === "string" ? value : "";
+}
+
+function normalizeAuthUser(raw: unknown): AuthUser {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    authUserId: readString(record, "authUserId", "AuthUserId"),
+    personId: Number(record.personId ?? record.PersonId ?? 0),
+    companyId: Number(record.companyId ?? record.CompanyId ?? 0),
+    companyRole: readString(record, "companyRole", "CompanyRole"),
+    personName: readString(record, "personName", "PersonName"),
+    email: readString(record, "email", "Email"),
+  };
+}
+
+function normalizeAuthTokenResponse(raw: unknown): AuthTokenResponse {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const user = normalizeAuthUser(record.user ?? record.User);
+  const accessToken = readString(record, "accessToken", "AccessToken");
+  const refreshTokenValue = readString(record, "refreshToken", "RefreshToken");
+  const accessTokenExpiresAt = readString(record, "accessTokenExpiresAt", "AccessTokenExpiresAt");
+
+  if (!accessToken) {
+    throw new Error("Auth response did not include an access token.");
+  }
+
+  if (!user.companyRole) {
+    throw new Error("Auth response did not include a company role.");
+  }
+
+  return {
+    accessToken,
+    refreshToken: refreshTokenValue,
+    accessTokenExpiresAt,
+    user,
+  };
+}
+
 export const useAuthStore = defineStore("auth", () => {
   const initialized = ref(false);
   const loading = ref(false);
@@ -40,14 +80,15 @@ export const useAuthStore = defineStore("auth", () => {
   function applyStatus(data: AuthStatus) {
     isAuthenticated.value = data.isAuthenticated;
     canBootstrap.value = data.canBootstrap;
-    user.value = data.user;
+    user.value = data.user ? normalizeAuthUser(data.user) : null;
     if (!data.isAuthenticated) {
       setAccessToken(null);
       refreshToken.value = null;
     }
   }
 
-  function applyTokenResponse(data: AuthTokenResponse) {
+  function applyTokenResponse(raw: AuthTokenResponse) {
+    const data = normalizeAuthTokenResponse(raw);
     setAccessToken(data.accessToken);
     refreshToken.value = data.refreshToken;
     isAuthenticated.value = true;
@@ -106,7 +147,7 @@ export const useAuthStore = defineStore("auth", () => {
           const cachedAccessToken = stored.accessToken;
           setAccessToken(cachedAccessToken);
 
-          const currentUser = await request<AuthUser>("/auth/me");
+          const currentUser = normalizeAuthUser(await request<AuthUser>("/auth/me"));
           applyStatus({ isAuthenticated: true, canBootstrap: false, user: currentUser });
 
           if (getAccessToken() === cachedAccessToken) {

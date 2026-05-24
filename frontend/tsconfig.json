@@ -14,11 +14,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-  "jsx": "preserve",
+    "jsx": "preserve",
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts", "playwright.config.ts", "tests/e2e/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

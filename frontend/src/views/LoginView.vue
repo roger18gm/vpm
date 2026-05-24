@@ -27,8 +27,12 @@ async function onSubmit() {
     } else {
       await auth.login(email.value, password.value);
     }
-    const redirect = typeof route.query.redirect === "string" ? route.query.redirect : auth.defaultHome;
-    await router.replace(redirect);
+    const redirectQuery = typeof route.query.redirect === "string" ? route.query.redirect : undefined;
+    const destination =
+      redirectQuery && redirectQuery !== "/" && redirectQuery.startsWith("/")
+        ? redirectQuery
+        : auth.defaultHome;
+    await router.replace(destination);
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Sign in failed.";
   } finally {

@@ -50,7 +50,7 @@ GitHub Actions backend integration tests and UI E2E tests expect:
 - a PostgreSQL 17 service container
 - a `CI_POSTGRES_PASSWORD` GitHub secret
 - backend CI sets `VISIONPAINT_TEST_PGADMIN` from that secret
-- UI E2E applies SQL migrations and starts the API with `ASPNETCORE_ENVIRONMENT=E2E`
+- UI E2E uses the same `frontend/tests/e2e/prepare-database.ts` script as local runs (via Playwright `globalSetup`) against `visionpaint_e2e`
 
 ## Run the backend tests
 
