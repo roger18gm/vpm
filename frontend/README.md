@@ -29,6 +29,7 @@ UI behavior and routes: [../docs/design/ui-spec.md](../docs/design/ui-spec.md)
 - `npm run preview` — preview production build
 - `npm run test:e2e` — Playwright smoke tests (installs Chromium on `npm install`, prepares DB, starts API + Vite, runs browser flow)
 - `npm run test:e2e:prepare-db` — reset `visionpaint_e2e` and apply migrations only (same script CI uses)
+- `npm run test:e2e:stop-servers` — free ports 5100 and 5173 (stale API/Vite from a prior run)
 
 ### E2E architecture
 
@@ -54,7 +55,7 @@ flowchart LR
   DB --> PG[(Postgres 17 service container)]
 ```
 
-Before each run, `tests/e2e/prepare-database.ts` drops/recreates `visionpaint_e2e` and applies `database/migrations/*.sql`. Local and CI both call this via Playwright `globalSetup` (or `npm run test:e2e:prepare-db`).
+Before each run, `tests/e2e/prepare-database.ts` drops/recreates `visionpaint_e2e` and applies `database/migrations/*.sql`. Playwright `globalSetup` starts the API and Vite together (avoids a race where setup would kill Vite). `globalTeardown` stops both.
 
 ### E2E prerequisites (local)
 
@@ -67,7 +68,9 @@ Before each run, `tests/e2e/prepare-database.ts` drops/recreates `visionpaint_e2
 
 3. From `frontend/`: `npm install` then `npm run test:e2e`.
 
-`npm run test:e2e` is self-contained: it does **not** use your Supabase connection from `appsettings.local.json`. Stop anything else bound to ports **5100** and **5173** unless you intend to reuse servers (see below).
+`npm run test:e2e` is self-contained: it does **not** use your Supabase connection from `appsettings.local.json`. Each run stops anything on ports **5100** and **5173** before starting (including leftover .NET Host processes from an interrupted run).
+
+**Troubleshooting:** If you see `VisionPaint.dll` locked by `.NET Host`, run `npm run test:e2e:stop-servers` or end the old process in Task Manager, then retry.
 
 ### E2E env overrides
 
