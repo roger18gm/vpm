@@ -41,8 +41,8 @@ Triggers:
 - optional `workflow_dispatch`
 
 Gate behavior:
-- required for PR merge
-- required before backend deploy
+- required status check on `main` (`Backend CI / backend-test`)
+- required before backend deploy (via branch protection on `main`)
 
 ### 2. UI E2E
 
@@ -62,8 +62,8 @@ Triggers:
 - optional `workflow_dispatch`
 
 Gate behavior:
-- required for PR quality
-- not a backend deploy blocker initially
+- required status check on `main` (`UI E2E / playwright`)
+- not a separate deploy workflow gate (deploy still relies on backend CI passing on `main`)
 
 ### 3. Backend Deploy
 
@@ -134,10 +134,10 @@ Separate workflows are the better fit for this repo.
 ## Deployment Policy
 
 Initial deployment policy:
-- backend CI blocks deploy
-- Playwright blocks PR merge but not backend deploy
+- **Backend CI** and **UI E2E** are required checks for merging into `main` (see [branch-protection.md](../ci/branch-protection.md)).
+- Backend deploy runs on push to `main` and should only run after those checks have passed on the merged commit.
 
-This keeps production safety tied to the highest-signal backend checks while the browser suite matures. If the Playwright suite becomes stable and high-value, it can be promoted to a deploy blocker later.
+Configure protection with `scripts/configure-main-branch-protection.ps1` after `gh auth login`, or via GitHub **Settings → Branches**.
 
 ## Implementation Notes
 
