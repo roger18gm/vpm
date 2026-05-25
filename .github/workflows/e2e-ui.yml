@@ -38,8 +38,8 @@ jobs:
       - name: Restore backend
         run: dotnet restore VisionPaint.sln
 
-      - name: Build backend for E2E
-        run: dotnet build backend/VisionPaint.csproj --configuration Release --no-restore
+      - name: Publish backend for E2E
+        run: dotnet publish backend/VisionPaint.csproj --configuration Release --output "${{ runner.temp }}/e2e-api" --no-restore
 
       - name: Install frontend dependencies
         run: npm ci
@@ -53,27 +53,49 @@ jobs:
           PLAYWRIGHT: "1"
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
         working-directory: ./frontend
 
       - name: Add swap (avoid OOM during Playwright)
         run: |
-          # ubuntu-latest already uses /swapfile; add extra swap on a separate path.
           SWAPFILE=/mnt/playwright-e2e.swap
           if ! swapon --show=NAME --noheadings | grep -qx "$SWAPFILE"; then
-            sudo fallocate -l 4G "$SWAPFILE" || sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=4096
+            sudo fallocate -l 8G "$SWAPFILE" || sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=8192
             sudo chmod 600 "$SWAPFILE"
             sudo mkswap "$SWAPFILE"
             sudo swapon "$SWAPFILE"
           fi
+          sudo sysctl vm.swappiness=80
+          swapon --show
           free -h
 
-      - name: Run Playwright E2E tests
-        run: npm run test:e2e
+      - name: Prepare E2E database
+        run: npm run test:e2e:prepare-db
+        working-directory: ./frontend
+        env:
+          VISIONPAINT_TEST_PGADMIN: Host=localhost;Port=5432;Username=postgres;Password=${{ secrets.CI_POSTGRES_PASSWORD }};Database=postgres
+
+      - name: Start E2E servers
+        run: npm run test:e2e:start-servers
         working-directory: ./frontend
         env:
           CI: true
+          PLAYWRIGHT_API_DLL: ${{ runner.temp }}/e2e-api/VisionPaint.dll
           VISIONPAINT_TEST_PGADMIN: Host=localhost;Port=5432;Username=postgres;Password=${{ secrets.CI_POSTGRES_PASSWORD }};Database=postgres
+
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e:ci
+        working-directory: ./frontend
+        env:
+          CI: true
+          PLAYWRIGHT_SKIP_WEBSERVER: "true"
+          PLAYWRIGHT_SKIP_DB_PREP: "true"
+          VISIONPAINT_TEST_PGADMIN: Host=localhost;Port=5432;Username=postgres;Password=${{ secrets.CI_POSTGRES_PASSWORD }};Database=postgres
+
+      - name: Stop E2E servers
+        if: always()
+        run: npm run test:e2e:stop-servers
+        working-directory: ./frontend
 
       - name: Upload Playwright artifacts
         if: failure()

@@ -9,8 +9,10 @@
     "preview": "vite preview",
     "postinstall": "playwright install chromium",
     "test:e2e:prepare-db": "tsx ./tests/e2e/prepare-database-runner.ts",
+    "test:e2e:start-servers": "tsx ./tests/e2e/start-e2e-servers-runner.ts",
     "test:e2e:stop-servers": "tsx ./tests/e2e/stop-e2e-servers-runner.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --workers=1"
   },
   "dependencies": {
     "@fontsource/inter": "5.2.5",

@@ -29,6 +29,8 @@ UI behavior and routes: [../docs/design/ui-spec.md](../docs/design/ui-spec.md)
 - `npm run preview` — preview production build
 - `npm run test:e2e` — Playwright smoke tests (installs Chromium on `npm install`, prepares DB, starts API + Vite, runs browser flow)
 - `npm run test:e2e:prepare-db` — reset `visionpaint_e2e` and apply migrations only (same script CI uses)
+- `npm run test:e2e:start-servers` — start API + Vite only (CI workflow step; local debugging)
+- `npm run test:e2e:ci` — Playwright with `--workers=1` (used in GitHub Actions)
 - `npm run test:e2e:stop-servers` — free ports 5100 and 5173 (stale API/Vite from a prior run)
 
 ### E2E architecture
@@ -57,7 +59,7 @@ flowchart LR
 
 Before each run, `tests/e2e/prepare-database.ts` drops/recreates `visionpaint_e2e` and applies `database/migrations/*.sql`. Playwright `globalSetup` starts the API and Vite together (avoids a race where setup would kill Vite). `globalTeardown` stops both.
 
-On CI, the workflow pre-builds the API and `dist/` first; setup uses `dotnet run --no-build` and `vite preview` (lower memory than dev + compile). The Ubuntu job also adds extra swap at `/mnt/playwright-e2e.swap` before the browser test (the runner already owns `/swapfile`).
+On CI, the workflow publishes the API, builds `dist/`, prepares the DB, starts API + `vite preview` in a separate step, then runs `npm run test:e2e:ci` (`--workers=1`) with `PLAYWRIGHT_SKIP_WEBSERVER` so Playwright does not spawn servers again. Extra swap is added at `/mnt/playwright-e2e.swap` (the runner already owns `/swapfile`).
 
 ### E2E prerequisites (local)
 
