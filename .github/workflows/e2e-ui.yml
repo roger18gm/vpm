@@ -58,10 +58,14 @@ jobs:
 
       - name: Add swap (avoid OOM during Playwright)
         run: |
-          sudo fallocate -l 4G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=4096
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          # ubuntu-latest already uses /swapfile; add extra swap on a separate path.
+          SWAPFILE=/mnt/playwright-e2e.swap
+          if ! swapon --show=NAME --noheadings | grep -qx "$SWAPFILE"; then
+            sudo fallocate -l 4G "$SWAPFILE" || sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=4096
+            sudo chmod 600 "$SWAPFILE"
+            sudo mkswap "$SWAPFILE"
+            sudo swapon "$SWAPFILE"
+          fi
           free -h
 
       - name: Run Playwright E2E tests
