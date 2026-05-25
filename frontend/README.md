@@ -57,6 +57,8 @@ flowchart LR
 
 Before each run, `tests/e2e/prepare-database.ts` drops/recreates `visionpaint_e2e` and applies `database/migrations/*.sql`. Playwright `globalSetup` starts the API and Vite together (avoids a race where setup would kill Vite). `globalTeardown` stops both.
 
+On CI, the workflow pre-builds the API and `dist/` first; setup uses `dotnet run --no-build` and `vite preview` (lower memory than dev + compile). The Ubuntu job also adds swap before the browser test.
+
 ### E2E prerequisites (local)
 
 1. **PostgreSQL 17** installed and running on your machine (`localhost:5432`).

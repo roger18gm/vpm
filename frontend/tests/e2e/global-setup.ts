@@ -9,6 +9,7 @@ const frontendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const repoRoot = path.resolve(frontendDir, "..");
 const apiOrigin = process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:5100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173";
+const isCi = process.env.CI === "true";
 
 export default async function globalSetup() {
   loadEnvFile(path.join(repoRoot, "backend.Tests", ".env"));
@@ -23,18 +24,30 @@ export default async function globalSetup() {
 
   const dbConnection = resolveDbConnection();
 
-  const backend = spawn(
-    "dotnet",
-    [
-      "run",
-      "--project",
-      "backend/VisionPaint.csproj",
-      "--configuration",
-      "Release",
-      "--no-launch-profile",
-      "--urls",
-      apiOrigin,
-    ],
+  const backendArgs = isCi
+    ? [
+        "run",
+        "--project",
+        "backend/VisionPaint.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-launch-profile",
+        "--urls",
+        apiOrigin,
+      ]
+    : [
+        "run",
+        "--project",
+        "backend/VisionPaint.csproj",
+        "--configuration",
+        "Release",
+        "--no-launch-profile",
+        "--urls",
+        apiOrigin,
+      ];
+
+  const backend = spawn("dotnet", backendArgs,
     {
       cwd: repoRoot,
       env: {
@@ -51,7 +64,10 @@ export default async function globalSetup() {
   backend.unref();
 
   const viteBin = path.join(frontendDir, "node_modules", "vite", "bin", "vite.js");
-  const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", "5173"], {
+  const viteArgs = isCi
+    ? [viteBin, "preview", "--host", "127.0.0.1", "--port", "5173", "--strictPort"]
+    : [viteBin, "--host", "127.0.0.1", "--port", "5173"];
+  const vite = spawn(process.execPath, viteArgs, {
     cwd: frontendDir,
     env: {
       ...process.env,

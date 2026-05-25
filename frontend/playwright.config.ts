@@ -23,7 +23,12 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
-    trace: "retain-on-failure",
+    trace: process.env.CI ? "off" : "retain-on-failure",
     actionTimeout: 15_000,
+    launchOptions: process.env.CI
+      ? {
+          args: ["--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu"],
+        }
+      : undefined,
   },
 });

@@ -38,13 +38,31 @@ jobs:
       - name: Restore backend
         run: dotnet restore VisionPaint.sln
 
+      - name: Build backend for E2E
+        run: dotnet build backend/VisionPaint.csproj --configuration Release --no-restore
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: ./frontend
 
+      - name: Build frontend for E2E
+        run: npx vite build
+        working-directory: ./frontend
+        env:
+          VITE_API_URL: http://127.0.0.1:5100/api
+          PLAYWRIGHT: "1"
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
         working-directory: ./frontend
+
+      - name: Add swap (avoid OOM during Playwright)
+        run: |
+          sudo fallocate -l 4G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=4096
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
 
       - name: Run Playwright E2E tests
         run: npm run test:e2e
