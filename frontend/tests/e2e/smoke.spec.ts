@@ -9,7 +9,7 @@ test("bootstrap, create a job, archive it, and sign out", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create the first account" })).toBeVisible();
 
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByRole("textbox", { name: /^Password/ }).fill(password);
 
   const bootstrapResponse = page.waitForResponse(
     (response) =>
