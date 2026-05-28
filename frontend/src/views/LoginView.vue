@@ -49,7 +49,7 @@ async function onSubmit() {
     <form class="space-y-3" @submit.prevent="onSubmit">
       <VpInput v-if="mode === 'bootstrap'" v-model="name" label="Your name" required />
       <VpInput v-model="email" label="Email" type="email" required placeholder="you@company.com" />
-      <VpInput v-model="password" label="Password" type="password" required />
+      <VpInput v-model="password" label="Password" type="password" required show-password-toggle />
       <VpButton type="submit" block :disabled="busy">{{ busy ? "Working…" : mode === "bootstrap" ? "Create account" : "Sign in" }}</VpButton>
     </form>
 
