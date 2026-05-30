@@ -24,6 +24,15 @@ if (builder.Environment.IsEnvironment("Testing"))
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
+});
+builder.Services.Configure<JobPhotoStorageOptions>(builder.Configuration.GetSection(JobPhotoStorageOptions.SectionName));
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -31,7 +40,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ICompanyAuthorizationService, CompanyAuthorizationService>();
+builder.Services.AddScoped<IJobAccessService, JobAccessService>();
+builder.Services.AddScoped<TimeEntryService>();
 builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
+
+if (isCiTestEnvironment || builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<IJobPhotoStorage, LocalJobPhotoStorage>();
+}
+else
+{
+    builder.Services.AddHttpClient<IJobPhotoStorage, SupabaseJobPhotoStorage>();
+}
 
 var signingKey = JwtSigningKeyResolver.Resolve(builder.Configuration, builder.Environment);
 

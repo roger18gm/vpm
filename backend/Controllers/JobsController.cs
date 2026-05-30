@@ -14,15 +14,25 @@ public sealed class JobsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICompanyAuthorizationService _companyAuthorization;
+    private readonly IJobAccessService _jobAccess;
 
-    public JobsController(AppDbContext db, ICurrentUserService currentUserService)
+    public JobsController(
+        AppDbContext db,
+        ICurrentUserService currentUserService,
+        ICompanyAuthorizationService companyAuthorization,
+        IJobAccessService jobAccess)
     {
         _db = db;
         _currentUserService = currentUserService;
+        _companyAuthorization = companyAuthorization;
+        _jobAccess = jobAccess;
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Job>>> GetJobs(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<Job>>> GetJobs(
+        [FromQuery] bool includeCancelled,
+        CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetAsync(cancellationToken);
         if (currentUser is null)
@@ -30,9 +40,13 @@ public sealed class JobsController : ControllerBase
             return Unauthorized();
         }
 
-        var jobs = await _db.Jobs
-            .AsNoTracking()
-            .Where(job => job.CompanyId == currentUser.CompanyId)
+        if (includeCancelled && !_companyAuthorization.IsManager(currentUser))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only managers can include cancelled jobs." });
+        }
+
+        var jobs = await _jobAccess
+            .FilterJobsForUser(_db.Jobs.AsNoTracking(), currentUser, includeCancelled)
             .OrderByDescending(job => job.UpdatedAt)
             .ThenByDescending(job => job.Id)
             .ToListAsync(cancellationToken);
@@ -41,10 +55,27 @@ public sealed class JobsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Job>> GetJob(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<JobDetailResponse>> GetJob(int id, CancellationToken cancellationToken)
     {
-        var job = await LoadJobAsync(id, cancellationToken);
-        return job is null ? NotFound() : Ok(job);
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _jobAccess.CanViewJobAsync(id, currentUser, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var job = await _jobAccess.GetCompanyJobAsync(id, currentUser, cancellationToken);
+        if (job is null)
+        {
+            return NotFound();
+        }
+
+        var assignments = await JobAssignmentHelper.LoadActiveAssignmentsAsync(_db, id, cancellationToken);
+        return Ok(JobAssignmentHelper.ToDetailResponse(job, assignments));
     }
 
     [HttpPost]
@@ -54,6 +85,11 @@ public sealed class JobsController : ControllerBase
         if (currentUser is null)
         {
             return Unauthorized();
+        }
+
+        if (!_companyAuthorization.IsManager(currentUser))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only managers can create jobs." });
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -122,7 +158,12 @@ public sealed class JobsController : ControllerBase
             return Unauthorized();
         }
 
-        var job = await _db.Jobs.FirstOrDefaultAsync(job => job.Id == id && job.CompanyId == currentUser.CompanyId, cancellationToken);
+        if (!_companyAuthorization.IsManager(currentUser))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only managers can update jobs." });
+        }
+
+        var job = await _db.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.CompanyId == currentUser.CompanyId, cancellationToken);
         if (job is null)
         {
             return NotFound();
@@ -187,7 +228,12 @@ public sealed class JobsController : ControllerBase
             return Unauthorized();
         }
 
-        var job = await _db.Jobs.FirstOrDefaultAsync(job => job.Id == id && job.CompanyId == currentUser.CompanyId, cancellationToken);
+        if (!_companyAuthorization.IsManager(currentUser))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only managers can archive jobs." });
+        }
+
+        var job = await _db.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.CompanyId == currentUser.CompanyId, cancellationToken);
         if (job is null)
         {
             return NotFound();
@@ -245,18 +291,5 @@ public sealed class JobsController : ControllerBase
     private static bool IsValidPriority(string priority)
     {
         return priority is "low" or "normal" or "high" or "urgent";
-    }
-
-    private async Task<Job?> LoadJobAsync(int id, CancellationToken cancellationToken)
-    {
-        var currentUser = await _currentUserService.GetAsync(cancellationToken);
-        if (currentUser is null)
-        {
-            return null;
-        }
-
-        return await _db.Jobs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(job => job.Id == id && job.CompanyId == currentUser.CompanyId, cancellationToken);
     }
 }

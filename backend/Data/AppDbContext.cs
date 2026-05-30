@@ -24,6 +24,14 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<JobStatusHistory> JobStatusHistories => Set<JobStatusHistory>();
 
+    public DbSet<JobAssignment> JobAssignments => Set<JobAssignment>();
+
+    public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+
+    public DbSet<TimeBreak> TimeBreaks => Set<TimeBreak>();
+
+    public DbSet<JobPhoto> JobPhotos => Set<JobPhoto>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -138,6 +146,60 @@ public sealed class AppDbContext : DbContext
             entity.Property(history => history.ChangedAt).HasColumnName("changed_at");
             entity.Property(history => history.Reason).HasColumnName("reason");
             entity.Property(history => history.Notes).HasColumnName("notes");
+        });
+
+        modelBuilder.Entity<JobAssignment>(entity =>
+        {
+            entity.ToTable("job_assignment");
+            entity.HasKey(assignment => new { assignment.JobId, assignment.PersonId });
+            entity.Property(assignment => assignment.JobId).HasColumnName("job_id");
+            entity.Property(assignment => assignment.PersonId).HasColumnName("person_id");
+            entity.Property(assignment => assignment.AssignmentRole).HasColumnName("assignment_role").HasDefaultValue("crew");
+            entity.Property(assignment => assignment.AssignedAt).HasColumnName("assigned_at");
+            entity.Property(assignment => assignment.UnassignedAt).HasColumnName("unassigned_at");
+        });
+
+        modelBuilder.Entity<TimeEntry>(entity =>
+        {
+            entity.ToTable("time_entry");
+            entity.HasKey(entry => entry.Id);
+            entity.Property(entry => entry.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(entry => entry.JobId).HasColumnName("job_id");
+            entity.Property(entry => entry.PersonId).HasColumnName("person_id");
+            entity.Property(entry => entry.ClockInAt).HasColumnName("clock_in_at");
+            entity.Property(entry => entry.ClockOutAt).HasColumnName("clock_out_at");
+            entity.Property(entry => entry.BreakMinutes).HasColumnName("break_minutes").HasDefaultValue(0);
+            entity.Property(entry => entry.Notes).HasColumnName("notes");
+            entity.Property(entry => entry.CreatedAt).HasColumnName("created_at");
+            entity.Property(entry => entry.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<TimeBreak>(entity =>
+        {
+            entity.ToTable("time_break");
+            entity.HasKey(breakEntry => breakEntry.Id);
+            entity.Property(breakEntry => breakEntry.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(breakEntry => breakEntry.TimeEntryId).HasColumnName("time_entry_id");
+            entity.Property(breakEntry => breakEntry.BreakStartAt).HasColumnName("break_start_at");
+            entity.Property(breakEntry => breakEntry.BreakEndAt).HasColumnName("break_end_at");
+            entity.Property(breakEntry => breakEntry.BreakType).HasColumnName("break_type").HasDefaultValue("rest");
+            entity.Property(breakEntry => breakEntry.Notes).HasColumnName("notes");
+        });
+
+        modelBuilder.Entity<JobPhoto>(entity =>
+        {
+            entity.ToTable("job_photo");
+            entity.HasKey(photo => photo.Id);
+            entity.Property(photo => photo.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(photo => photo.JobId).HasColumnName("job_id");
+            entity.Property(photo => photo.JobAreaId).HasColumnName("job_area_id");
+            entity.Property(photo => photo.JobStatus).HasColumnName("job_status");
+            entity.Property(photo => photo.UploadedByPersonId).HasColumnName("uploaded_by_person_id");
+            entity.Property(photo => photo.PhotoKind).HasColumnName("photo_kind").HasDefaultValue("progress");
+            entity.Property(photo => photo.StoragePath).HasColumnName("storage_path");
+            entity.Property(photo => photo.Caption).HasColumnName("caption");
+            entity.Property(photo => photo.TakenAt).HasColumnName("taken_at");
+            entity.Property(photo => photo.CreatedAt).HasColumnName("created_at");
         });
     }
 }

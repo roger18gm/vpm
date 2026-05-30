@@ -43,6 +43,25 @@ Endpoints:
 
 Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`.
 
+## Job photo storage
+
+| Environment | Storage |
+|-------------|---------|
+| Development, Testing, E2E | Local files under `%TEMP%/visionpaint-photos`, served at `/api/local-files/...` |
+| Production (Azure) | Supabase Storage via service role |
+
+Azure application settings:
+
+| Setting | Description |
+|---------|-------------|
+| `Supabase:Url` | Project URL (e.g. `https://xxxx.supabase.co`) |
+| `Supabase:ServiceRoleKey` | Service role key (server only) |
+| `Supabase:Bucket` | Bucket name (default `job-photos`) |
+
+## Demo crew account
+
+After bootstrap, use integration-test pattern or `database/seed/dev-crew-demo.sql` notes to add a `crew` user and assign them via `PUT /api/jobs/{id}/assignments`.
+
 ## CI test prerequisites
 
 GitHub Actions backend integration tests and UI E2E tests expect:

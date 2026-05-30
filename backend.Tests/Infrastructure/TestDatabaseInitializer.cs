@@ -17,6 +17,10 @@ public static class TestDatabaseInitializer
         await db.Database.ExecuteSqlRawAsync(
             """
             truncate table public.refresh_token,
+                          public.time_break,
+                          public.time_entry,
+                          public.job_photo,
+                          public.job_assignment,
                           public.job_status_history,
                           public.job,
                           public.company_member,
