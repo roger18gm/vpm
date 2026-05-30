@@ -45,11 +45,29 @@ export type JobInput = {
 
 export type PhotoKind = "before" | "after" | "progress";
 
+export type JobAssignment = {
+  personId: number;
+  name: string;
+  assignmentRole: string;
+  assignedAt: string;
+};
+
+export type JobDetail = Job & {
+  assignments?: JobAssignment[];
+};
+
 export type JobPhoto = {
-  id: string;
+  id: number;
   jobId: number;
-  kind: PhotoKind;
+  photoKind: PhotoKind;
   caption: string | null;
   takenAt: string;
-  uploadedBy: string;
+  uploadedByName: string;
+  url: string;
+};
+
+export type JobTimeSummary = {
+  totalMinutes: number;
+  activeMinutes: number;
+  byPerson: { personId: number; name: string; minutes: number; inProgress: boolean }[];
 };

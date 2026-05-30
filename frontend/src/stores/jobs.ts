@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { request } from "@/lib/api";
-import type { Job, JobInput } from "@/types/job";
+import type { Job, JobDetail, JobInput } from "@/types/job";
 import { isJobOverdue } from "@/utils/job";
 
 export const useJobsStore = defineStore("jobs", () => {
@@ -27,8 +27,8 @@ export const useJobsStore = defineStore("jobs", () => {
     }
   }
 
-  async function fetchJob(id: number): Promise<Job> {
-    return request<Job>(`/jobs/${id}`);
+  async function fetchJob(id: number): Promise<JobDetail> {
+    return request<JobDetail>(`/jobs/${id}`);
   }
 
   async function createJob(input: JobInput): Promise<Job> {

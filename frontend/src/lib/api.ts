@@ -1,5 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
 
+export function resolveAssetUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const origin = API_URL.replace(/\/api\/?$/i, "");
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 let accessToken: string | null = null;
 let refreshHandler: (() => Promise<boolean>) | null = null;
 
@@ -45,6 +53,26 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
 
   if (response.status === 204) {
     return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
+  const headers = new Headers();
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Upload failed with ${response.status}`);
   }
 
   return (await response.json()) as T;

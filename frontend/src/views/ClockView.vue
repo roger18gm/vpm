@@ -23,15 +23,34 @@ function selectJob(job: Job) {
   selectedJobId.value = job.id;
 }
 
-function confirmClockIn() {
+const busy = ref(false);
+const error = ref<string | null>(null);
+
+async function confirmClockIn() {
   const job = jobsStore.jobs.find((j) => j.id === selectedJobId.value);
   if (!job) return;
-  clock.clockIn(job.id, job.title);
+  busy.value = true;
+  error.value = null;
+  try {
+    await clock.clockIn(job.id, job.title);
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Unable to clock in.";
+  } finally {
+    busy.value = false;
+  }
 }
 
-function confirmClockOut() {
+async function confirmClockOut() {
   if (!confirm("Clock out now?")) return;
-  clock.clockOut();
+  busy.value = true;
+  error.value = null;
+  try {
+    await clock.clockOut();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Unable to clock out.";
+  } finally {
+    busy.value = false;
+  }
 }
 </script>
 
@@ -47,12 +66,12 @@ function confirmClockOut() {
     </VpCard>
 
     <div class="grid grid-cols-2 gap-3 mb-4">
-      <VpButton v-if="!clock.active.onBreak" variant="secondary" @click="clock.startBreak">Start break</VpButton>
-      <VpButton v-else variant="secondary" @click="clock.endBreak">End break</VpButton>
+      <VpButton v-if="!clock.active.onBreak" variant="secondary" :disabled="busy" @click="clock.startBreak">Start break</VpButton>
+      <VpButton v-else variant="secondary" :disabled="busy" @click="clock.endBreak">End break</VpButton>
     </div>
 
-    <VpButton variant="danger" block @click="confirmClockOut">Clock out</VpButton>
-    <p class="text-xs text-muted text-center mt-3">Work and break time saved locally until time API ships.</p>
+    <VpButton variant="danger" block :disabled="busy" @click="confirmClockOut">Clock out</VpButton>
+    <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
   </template>
 
   <template v-else>
@@ -72,6 +91,7 @@ function confirmClockOut() {
       <p v-if="!assignableJobs().length" class="text-sm text-muted">No active jobs to clock into.</p>
     </VpCard>
 
-    <VpButton block :disabled="!selectedJobId" @click="confirmClockIn">Clock in</VpButton>
+    <VpButton block :disabled="!selectedJobId || busy" @click="confirmClockIn">Clock in</VpButton>
+    <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
   </template>
 </template>

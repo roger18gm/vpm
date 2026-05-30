@@ -1,12 +1,13 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { getAccessToken, request, setAccessToken, setRefreshHandler } from "@/lib/api";
+import { useClockStore } from "@/stores/clock";
 import type { AuthStatus, AuthTokenResponse, AuthUser, StoredAuth } from "@/types/auth";
 import { AUTH_STORAGE_KEY, isManagerRole } from "@/types/auth";
 
 function loadStoredAuth(): StoredAuth | null {
   try {
-    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_STORAGE_KEY);
     return raw ? (JSON.parse(raw) as StoredAuth) : null;
   } catch {
     return null;
@@ -15,8 +16,10 @@ function loadStoredAuth(): StoredAuth | null {
 
 function saveStoredAuth(session: StoredAuth | null) {
   if (session) {
-    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
   } else {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     sessionStorage.removeItem(AUTH_STORAGE_KEY);
   }
 }
@@ -157,16 +160,21 @@ export const useAuthStore = defineStore("auth", () => {
             });
           }
 
+          await useClockStore().hydrateFromServer();
           return;
         }
 
         if (await refreshSession()) {
+          await useClockStore().hydrateFromServer();
           return;
         }
       }
 
       const data = await request<AuthStatus>("/auth/status");
       applyStatus(data);
+      if (data.isAuthenticated) {
+        await useClockStore().hydrateFromServer();
+      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Unable to load session.";
       clearSession();
@@ -182,6 +190,7 @@ export const useAuthStore = defineStore("auth", () => {
       body: JSON.stringify({ email, password }),
     }, false);
     applyTokenResponse(data);
+    await useClockStore().hydrateFromServer();
     return data.user;
   }
 
@@ -191,6 +200,7 @@ export const useAuthStore = defineStore("auth", () => {
       body: JSON.stringify({ name, email, password }),
     }, false);
     applyTokenResponse(data);
+    await useClockStore().hydrateFromServer();
     return data.user;
   }
 

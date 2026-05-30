@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import type { Job } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
@@ -9,12 +9,12 @@ const props = defineProps<{ id: number }>();
 const jobsStore = useJobsStore();
 const photosStore = usePhotosStore();
 const job = ref<Job | null>(null);
+const photos = ref(photosStore.list(props.id));
 
 onMounted(async () => {
   job.value = jobsStore.getJobFromCache(props.id) ?? (await jobsStore.fetchJob(props.id));
+  photos.value = await photosStore.fetchPhotos(props.id);
 });
-
-const photos = computed(() => photosStore.list(props.id));
 
 function kindLabel(kind: string) {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
@@ -28,11 +28,11 @@ function kindLabel(kind: string) {
 
   <ul v-if="photos.length" class="space-y-4 mb-20">
     <li v-for="photo in photos" :key="photo.id" class="flex gap-3 bg-surface border border-border rounded-lg p-3">
-      <div class="w-16 h-16 rounded-md bg-page shrink-0 flex items-center justify-center text-xs text-muted">img</div>
+      <img :src="photo.url" alt="" class="w-16 h-16 rounded-md object-cover bg-page shrink-0" />
       <div class="min-w-0">
-        <span class="text-xs font-semibold" :class="photo.kind === 'progress' ? 'text-primary' : 'text-muted'">{{ kindLabel(photo.kind) }}</span>
+        <span class="text-xs font-semibold" :class="photo.photoKind === 'progress' ? 'text-primary' : 'text-muted'">{{ kindLabel(photo.photoKind) }}</span>
         <p class="text-sm truncate">{{ photo.caption ?? "No caption" }}</p>
-        <p class="text-xs text-muted">{{ new Date(photo.takenAt).toLocaleString() }} · {{ photo.uploadedBy }}</p>
+        <p class="text-xs text-muted">{{ new Date(photo.takenAt).toLocaleString() }} · {{ photo.uploadedByName }}</p>
       </div>
     </li>
   </ul>

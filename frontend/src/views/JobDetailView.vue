@@ -6,7 +6,8 @@ import PriorityChip from "@/components/job/PriorityChip.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpSelect from "@/components/ui/VpSelect.vue";
-import type { Job } from "@/types/job";
+import type { Job, JobTimeSummary } from "@/types/job";
+import { request } from "@/lib/api";
 import { formatJobAddress } from "@/utils/job";
 import { useAuthStore } from "@/stores/auth";
 import { useJobsStore } from "@/stores/jobs";
@@ -21,6 +22,7 @@ const router = useRouter();
 const job = ref<Job | null>(null);
 const error = ref<string | null>(null);
 const statusDraft = ref("");
+const timeSummary = ref<JobTimeSummary | null>(null);
 
 const address = computed(() => (job.value ? formatJobAddress(job.value) : null));
 const isActiveClockJob = computed(() => clock.active?.jobId === props.id);
@@ -29,15 +31,20 @@ onMounted(async () => {
   try {
     job.value = jobsStore.getJobFromCache(props.id) ?? (await jobsStore.fetchJob(props.id));
     statusDraft.value = job.value.status;
+    timeSummary.value = await request<JobTimeSummary>(`/jobs/${props.id}/time`);
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Job not found.";
   }
 });
 
-function clockInHere() {
+async function clockInHere() {
   if (!job.value || clock.isClockedIn) return;
-  clock.clockIn(job.value.id, job.value.title);
-  void router.push({ name: "clock" });
+  try {
+    await clock.clockIn(job.value.id, job.value.title);
+    await router.push({ name: "clock" });
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Unable to clock in.";
+  }
 }
 
 async function saveStatus() {
@@ -116,7 +123,11 @@ async function archiveJob() {
 
     <VpCard>
       <template #title>Time on this job</template>
-      <p class="text-2xl font-bold">— <span class="text-base font-normal text-muted">hrs (API pending)</span></p>
+      <p v-if="timeSummary" class="text-2xl font-bold">
+        {{ (timeSummary.totalMinutes / 60).toFixed(1) }}
+        <span class="text-base font-normal text-muted">hrs</span>
+      </p>
+      <p v-else class="text-sm text-muted">No time logged yet.</p>
     </VpCard>
   </template>
   <p v-else class="text-muted text-sm">Loading…</p>

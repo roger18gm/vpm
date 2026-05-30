@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
-
-const STORAGE_KEY = "visionpaint_active_clock";
+import { request } from "@/lib/api";
 
 type ActiveClock = {
+  timeEntryId: number;
   jobId: number;
   jobTitle: string;
   clockInAt: string;
@@ -11,25 +11,22 @@ type ActiveClock = {
   breakStartedAt: string | null;
 };
 
-function loadClock(): ActiveClock | null {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ActiveClock) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveClock(clock: ActiveClock | null) {
-  if (clock) {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(clock));
-  } else {
-    sessionStorage.removeItem(STORAGE_KEY);
-  }
+function normalizeActive(raw: Record<string, unknown> | null): ActiveClock | null {
+  if (!raw) return null;
+  const jobId = Number(raw.jobId ?? raw.JobId ?? 0);
+  if (!jobId) return null;
+  return {
+    timeEntryId: Number(raw.timeEntryId ?? raw.TimeEntryId ?? 0),
+    jobId,
+    jobTitle: String(raw.jobTitle ?? raw.JobTitle ?? ""),
+    clockInAt: String(raw.clockInAt ?? raw.ClockInAt ?? new Date().toISOString()),
+    onBreak: Boolean(raw.onBreak ?? raw.OnBreak ?? false),
+    breakStartedAt: (raw.breakStartedAt ?? raw.BreakStartedAt ?? null) as string | null,
+  };
 }
 
 export const useClockStore = defineStore("clock", () => {
-  const active = ref<ActiveClock | null>(loadClock());
+  const active = ref<ActiveClock | null>(null);
   const now = ref(Date.now());
   let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -63,36 +60,56 @@ export const useClockStore = defineStore("clock", () => {
     return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
   });
 
-  if (active.value) startTicker();
+  async function hydrateFromServer() {
+    const raw = await request<Record<string, unknown> | null>("/time/active");
+    active.value = normalizeActive(raw);
+    if (active.value) {
+      startTicker();
+    } else {
+      stopTicker();
+    }
+  }
 
-  function clockIn(jobId: number, jobTitle: string) {
+  async function clockIn(jobId: number, jobTitle: string) {
     if (active.value) return;
-    active.value = {
-      jobId,
-      jobTitle,
-      clockInAt: new Date().toISOString(),
-      onBreak: false,
-      breakStartedAt: null,
-    };
-    saveClock(active.value);
+    const raw = await request<Record<string, unknown>>("/time/clock-in", {
+      method: "POST",
+      body: JSON.stringify({ jobId }),
+    });
+    const hydrated = normalizeActive(raw);
+    if (hydrated) {
+      active.value = hydrated;
+    } else {
+      active.value = {
+        timeEntryId: 0,
+        jobId,
+        jobTitle,
+        clockInAt: new Date().toISOString(),
+        onBreak: false,
+        breakStartedAt: null,
+      };
+    }
     startTicker();
   }
 
-  function startBreak() {
+  async function startBreak() {
     if (!active.value || active.value.onBreak) return;
+    await request<void>("/time/break/start", { method: "POST" });
     active.value = { ...active.value, onBreak: true, breakStartedAt: new Date().toISOString() };
-    saveClock(active.value);
   }
 
-  function endBreak() {
+  async function endBreak() {
     if (!active.value || !active.value.onBreak) return;
+    await request<void>("/time/break/end", { method: "POST" });
     active.value = { ...active.value, onBreak: false, breakStartedAt: null };
-    saveClock(active.value);
   }
 
-  function clockOut() {
+  async function clockOut() {
+    await request<{ workMinutes: number; breakMinutes: number }>("/time/clock-out", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
     active.value = null;
-    saveClock(null);
     stopTicker();
   }
 
@@ -100,6 +117,7 @@ export const useClockStore = defineStore("clock", () => {
     active,
     isClockedIn,
     elapsedDisplay,
+    hydrateFromServer,
     clockIn,
     startBreak,
     endBreak,

@@ -5,41 +5,47 @@ import { RouterLink } from "vue-router";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpSelect from "@/components/ui/VpSelect.vue";
 import type { PhotoKind } from "@/types/job";
-import { useAuthStore } from "@/stores/auth";
 import { usePhotosStore } from "@/stores/photos";
 
 const props = defineProps<{ id: number }>();
 const router = useRouter();
-const auth = useAuthStore();
 const photosStore = usePhotosStore();
 
 const kind = ref<PhotoKind>("progress");
 const caption = ref("");
-const fileName = ref<string | null>(null);
+const file = ref<File | null>(null);
 const busy = ref(false);
+const error = ref<string | null>(null);
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
-  fileName.value = input.files?.[0]?.name ?? null;
+  file.value = input.files?.[0] ?? null;
 }
 
 async function onSubmit() {
-  if (!fileName.value) return;
+  if (!file.value) return;
   busy.value = true;
-  photosStore.add(props.id, kind.value, caption.value || null, auth.user?.personName ?? "You");
-  await router.push({ name: "job-photos", params: { id: props.id } });
+  error.value = null;
+  try {
+    await photosStore.upload(props.id, file.value, kind.value, caption.value || null);
+    await router.push({ name: "job-photos", params: { id: props.id } });
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Upload failed.";
+  } finally {
+    busy.value = false;
+  }
 }
 </script>
 
 <template>
   <RouterLink :to="{ name: 'job-photos', params: { id } }" class="text-sm text-primary mb-3 inline-block">← Photos</RouterLink>
   <h1 class="text-xl font-bold mb-6">Add photo</h1>
+  <p v-if="error" class="text-sm text-error mb-3">{{ error }}</p>
 
   <form class="space-y-4" @submit.prevent="onSubmit">
     <label class="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg bg-surface p-8 min-h-[160px] cursor-pointer">
       <span class="text-3xl mb-2">📷</span>
-      <span class="text-sm font-semibold">{{ fileName ?? "Take photo or choose file" }}</span>
-      <span class="text-xs text-muted mt-1">Stored locally until upload API ships</span>
+      <span class="text-sm font-semibold">{{ file?.name ?? "Take photo or choose file" }}</span>
       <input type="file" accept="image/*" capture="environment" class="sr-only" @change="onFileChange" />
     </label>
 
@@ -61,6 +67,6 @@ async function onSubmit() {
       />
     </label>
 
-    <VpButton type="submit" block :disabled="busy || !fileName">{{ busy ? "Saving…" : "Save photo" }}</VpButton>
+    <VpButton type="submit" block :disabled="busy || !file">{{ busy ? "Uploading…" : "Save photo" }}</VpButton>
   </form>
 </template>
