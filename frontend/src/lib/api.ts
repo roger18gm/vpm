@@ -23,15 +23,11 @@ export function setRefreshHandler(handler: (() => Promise<boolean>) | null) {
   refreshHandler = handler;
 }
 
-export async function request<T>(path: string, init?: RequestInit, allowRetry = true): Promise<T> {
-  const headers = new Headers(init?.headers);
+async function fetchWithAuth(path: string, init: RequestInit, allowRetry: boolean): Promise<Response> {
+  const headers = new Headers(init.headers);
 
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  if (!headers.has("Content-Type") && init?.body) {
-    headers.set("Content-Type", "application/json");
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -42,9 +38,24 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
   if (response.status === 401 && allowRetry && refreshHandler && !path.includes("/auth/login") && !path.includes("/auth/refresh")) {
     const refreshed = await refreshHandler();
     if (refreshed) {
-      return request<T>(path, init, false);
+      return fetchWithAuth(path, init, false);
     }
   }
+
+  return response;
+}
+
+export async function request<T>(path: string, init?: RequestInit, allowRetry = true): Promise<T> {
+  const headers = new Headers(init?.headers);
+
+  if (!headers.has("Content-Type") && init?.body) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetchWithAuth(path, {
+    ...init,
+    headers,
+  }, allowRetry);
 
   if (!response.ok) {
     const message = await response.text();
@@ -59,16 +70,10 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
 }
 
 export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
-  const headers = new Headers();
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetchWithAuth(path, {
     method: "POST",
-    headers,
     body: form,
-  });
+  }, true);
 
   if (!response.ok) {
     const message = await response.text();

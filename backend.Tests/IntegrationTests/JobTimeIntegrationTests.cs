@@ -63,4 +63,52 @@ public sealed class JobTimeIntegrationTests : IClassFixture<BackendIntegrationFi
         Assert.NotNull(summary);
         Assert.Equal(60, summary!.TotalMinutes);
     }
+
+    [Fact]
+    public async Task GetJobTime_subtracts_open_break_from_active_entry()
+    {
+        var owner = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new { title = "Break hours" });
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>()
+                .UseNpgsql(_fixture.Database.ConnectionString)
+                .Options);
+
+        var ownerPersonId = await db.People
+            .Where(p => p.AuthUserId == owner.User.AuthUserId)
+            .Select(p => p.Id)
+            .SingleAsync();
+
+        var now = DateTimeOffset.UtcNow;
+        var entry = new TimeEntry
+        {
+            JobId = job!.Id,
+            PersonId = ownerPersonId,
+            ClockInAt = now.AddMinutes(-60),
+            CreatedAt = now.AddMinutes(-60),
+            UpdatedAt = now.AddMinutes(-60)
+        };
+        db.TimeEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        db.TimeBreaks.Add(new TimeBreak
+        {
+            TimeEntryId = entry.Id,
+            BreakStartAt = now.AddMinutes(-30),
+            BreakType = "rest"
+        });
+        await db.SaveChangesAsync();
+
+        var summary = await _fixture.Client.GetFromJsonAsync<JobTimeSummaryDto>($"/api/jobs/{job.Id}/time");
+        Assert.NotNull(summary);
+        Assert.InRange(summary!.TotalMinutes, 25, 35);
+        Assert.InRange(summary.ActiveMinutes, 25, 35);
+    }
 }

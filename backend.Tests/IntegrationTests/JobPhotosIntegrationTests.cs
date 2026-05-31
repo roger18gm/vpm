@@ -64,4 +64,24 @@ public sealed class JobPhotosIntegrationTests : IClassFixture<BackendIntegration
         Assert.Single(list!);
         Assert.Equal("progress", list[0].PhotoKind);
     }
+
+    [Fact]
+    public async Task LocalFiles_rejects_paths_outside_photo_root()
+    {
+        var escapedFileName = $"visionpaint-escape-{Guid.NewGuid():N}.txt";
+        var escapedPath = Path.Combine(Path.GetTempPath(), escapedFileName);
+        await File.WriteAllTextAsync(escapedPath, "not a photo");
+
+        try
+        {
+            var escapedStoragePath = Uri.EscapeDataString($"../{escapedFileName}");
+            using var response = await _fixture.Client.GetAsync($"/api/local-files/{escapedStoragePath}");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+        finally
+        {
+            File.Delete(escapedPath);
+        }
+    }
 }

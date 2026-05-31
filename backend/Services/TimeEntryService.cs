@@ -186,6 +186,13 @@ public sealed class TimeEntryService
             .Where(e => e.JobId == jobId)
             .ToListAsync(cancellationToken);
 
+        var entryIds = entries.Select(e => e.Id).ToList();
+        var breaksByEntryId = await _db.TimeBreaks
+            .AsNoTracking()
+            .Where(b => entryIds.Contains(b.TimeEntryId))
+            .GroupBy(b => b.TimeEntryId)
+            .ToDictionaryAsync(g => g.Key, g => g.ToList(), cancellationToken);
+
         var personIds = entries.Select(e => e.PersonId).Distinct().ToList();
         var people = await _db.People
             .AsNoTracking()
@@ -208,8 +215,10 @@ public sealed class TimeEntryService
                 {
                     inProgress = true;
                     var partial = (int)Math.Max(0, (now - entry.ClockInAt).TotalMinutes);
-                    minutes += partial;
-                    activeMinutes += partial;
+                    var breakMinutes = SumBreakMinutes(breaksByEntryId.GetValueOrDefault(entry.Id), now);
+                    var workMinutes = Math.Max(0, partial - breakMinutes);
+                    minutes += workMinutes;
+                    activeMinutes += workMinutes;
                 }
                 else
                 {
@@ -260,5 +269,15 @@ public sealed class TimeEntryService
             .ToListAsync(cancellationToken);
 
         return breaks.Sum(b => (int)Math.Max(0, (b.BreakEndAt!.Value - b.BreakStartAt).TotalMinutes));
+    }
+
+    private static int SumBreakMinutes(IReadOnlyList<TimeBreak>? breaks, DateTimeOffset now)
+    {
+        if (breaks is null)
+        {
+            return 0;
+        }
+
+        return breaks.Sum(b => (int)Math.Max(0, ((b.BreakEndAt ?? now) - b.BreakStartAt).TotalMinutes));
     }
 }
