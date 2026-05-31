@@ -70,3 +70,23 @@ public sealed record JobPhotoDto(
     DateTimeOffset TakenAt,
     string UploadedByName,
     string Url);
+
+public sealed record UserAdminDto(
+    int PersonId,
+    Guid AuthUserId,
+    string Name,
+    string Email,
+    string CompanyRole,
+    string MembershipStatus,
+    bool IsActive,
+    bool IsClockedIn,
+    string? ClockedInJobTitle,
+    DateTimeOffset? LastLoginAt);
+
+public sealed record CreateUserRequest(
+    string Name,
+    string Email,
+    string Password,
+    string CompanyRole);
+
+public sealed record UpdateUserRoleRequest(string CompanyRole);

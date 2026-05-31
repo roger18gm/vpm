@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { isManagerRole } from "@/types/auth";
+import { isAdminRole, isManagerRole } from "@/types/auth";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -82,6 +82,12 @@ const router = createRouter({
           component: () => import("@/views/ClockView.vue"),
         },
         {
+          path: "users",
+          name: "users",
+          component: () => import("@/views/UsersView.vue"),
+          meta: { adminOnly: true },
+        },
+        {
           path: "account",
           name: "account",
           component: () => import("@/views/AccountView.vue"),
@@ -114,6 +120,11 @@ router.beforeEach(async (to) => {
 
   const managerOnly = to.matched.some((record) => record.meta.managerOnly);
   if (managerOnly && !isManagerRole(auth.user?.companyRole)) {
+    return { name: "forbidden" };
+  }
+
+  const adminOnly = to.matched.some((record) => record.meta.adminOnly);
+  if (adminOnly && !isAdminRole(auth.user?.companyRole)) {
     return { name: "forbidden" };
   }
 

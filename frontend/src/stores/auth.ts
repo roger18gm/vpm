@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import { getAccessToken, request, setAccessToken, setRefreshHandler } from "@/lib/api";
 import { useClockStore } from "@/stores/clock";
 import type { AuthStatus, AuthTokenResponse, AuthUser, StoredAuth } from "@/types/auth";
-import { AUTH_STORAGE_KEY, isManagerRole } from "@/types/auth";
+import { AUTH_STORAGE_KEY, isAdminRole, isManagerRole } from "@/types/auth";
 
 function loadStoredAuth(): StoredAuth | null {
   try {
@@ -78,6 +78,7 @@ export const useAuthStore = defineStore("auth", () => {
   const refreshToken = ref<string | null>(null);
 
   const isManager = computed(() => isManagerRole(user.value?.companyRole));
+  const isAdmin = computed(() => isAdminRole(user.value?.companyRole));
   const defaultHome = computed(() => (isManager.value ? "/dashboard" : "/jobs"));
 
   function applyStatus(data: AuthStatus) {
@@ -222,6 +223,7 @@ export const useAuthStore = defineStore("auth", () => {
     canBootstrap,
     user,
     isManager,
+    isAdmin,
     defaultHome,
     initialize,
     login,

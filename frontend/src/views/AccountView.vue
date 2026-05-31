@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import VpButton from "@/components/ui/VpButton.vue";
@@ -29,6 +29,7 @@ async function signOut() {
       <p class="text-xs text-muted">Role</p>
       <p class="font-semibold capitalize">{{ auth.user?.companyRole }}</p>
     </div>
+    <RouterLink v-if="auth.isAdmin" to="/users" class="text-sm text-primary inline-block">Manage users</RouterLink>
     <VpButton variant="secondary" block @click="signOut">Sign out</VpButton>
   </VpCard>
 </template>

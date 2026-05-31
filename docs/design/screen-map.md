@@ -43,6 +43,7 @@ Authorization rules: [auth design](../superpowers/specs/2026-05-07-auth-design.m
 | SCR-014 | Access denied              | `/forbidden`           | all                   | P0       | —                                             |
 | SCR-015 | Job areas (rooms)          | `/jobs/:id/areas`      | manager+              | P2       | `job_area` (schema only)                      |
 | SCR-016 | Checklists                 | `/jobs/:id/checklist`  | manager+              | P2       | `job_checklist_item` (schema only)            |
+| SCR-017 | Users admin                | `/users`               | owner, admin          | P1       | `GET/POST/PATCH /api/users`                   |
 
 ---
 

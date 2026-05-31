@@ -1,15 +1,24 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import { Icon } from "@iconify/vue";
+import { useAuthStore } from "@/stores/auth";
 
-const links = [
-  { to: "/dashboard", label: "Dashboard", icon: "mdi:view-dashboard-outline" },
-  { to: "/jobs", label: "Jobs", icon: "mdi:clipboard-list-outline" },
-  { to: "/clock", label: "Clock", icon: "mdi:clock-outline" },
-  { to: "/account", label: "Account", icon: "mdi:account-outline" },
-];
-
+const auth = useAuthStore();
 const route = useRoute();
+
+const links = computed(() => {
+  const base = [
+    { to: "/dashboard", label: "Dashboard", icon: "mdi:view-dashboard-outline" },
+    { to: "/jobs", label: "Jobs", icon: "mdi:clipboard-list-outline" },
+    { to: "/clock", label: "Clock", icon: "mdi:clock-outline" },
+  ];
+  if (auth.isAdmin) {
+    base.push({ to: "/users", label: "Users", icon: "mdi:account-group-outline" });
+  }
+  base.push({ to: "/account", label: "Account", icon: "mdi:account-outline" });
+  return base;
+});
 
 function isActive(to: string) {
   return route.path === to || (to !== "/dashboard" && route.path.startsWith(to));
