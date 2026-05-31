@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <style>
+      /* Canvas Background */
+      .bg { fill: #f4f4f5; }
+
+      /* Paint Brush Group Animation */
+      .brush-group {
+        animation: brush-action 5s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+        transform-origin: 0px 0px;
+      }
+
+      /* Paint Strokes Reveal Animations */
+      .paint-stroke {
+        stroke: #000000;
+        stroke-width: 16;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        opacity: 0;
+      }
+
+      .stroke-1 {
+        stroke-dasharray: 150;
+        stroke-dashoffset: 150;
+        animation: stroke-reveal-1 5s linear infinite;
+      }
+
+      .stroke-2 {
+        stroke-dasharray: 150;
+        stroke-dashoffset: 150;
+        animation: stroke-reveal-2 5s linear infinite;
+      }
+
+      .stroke-3 {
+        stroke-dasharray: 150;
+        stroke-dashoffset: 150;
+        animation: stroke-reveal-3 5s linear infinite;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes brush-action {
+        0%   { transform: translate(120px, 120px) rotate(15deg); }
+        
+        /* Move to bucket & Dip */
+        10%  { transform: translate(290px, 140px) rotate(25deg); }
+        15%  { transform: translate(290px, 210px) rotate(15deg); } 
+        20%  { transform: translate(290px, 130px) rotate(5deg); }  
+
+        /* Paint First Stroke */
+        28%  { transform: translate(60px, 150px) rotate(-35deg); }
+        36%  { transform: translate(210px, 150px) rotate(-20deg); }
+
+        /* Return & Dip Again */
+        44%  { transform: translate(290px, 140px) rotate(25deg); }
+        48%  { transform: translate(290px, 210px) rotate(15deg); } 
+        52%  { transform: translate(290px, 130px) rotate(5deg); }  
+
+        /* Paint Second Stroke */
+        60%  { transform: translate(60px, 200px) rotate(-35deg); }
+        68%  { transform: translate(210px, 200px) rotate(-20deg); }
+
+        /* Paint Third Stroke */
+        74%  { transform: translate(60px, 250px) rotate(-35deg); }
+        82%  { transform: translate(210px, 250px) rotate(-20deg); }
+
+        /* Return to Home */
+        92%, 100% { transform: translate(120px, 120px) rotate(15deg); }
+      }
+
+      @keyframes stroke-reveal-1 {
+        0%, 28%   { stroke-dashoffset: 150; opacity: 0; }
+        29%       { opacity: 1; }
+        36%, 90%  { stroke-dashoffset: 0; opacity: 1; }
+        96%, 100% { opacity: 0; }
+      }
+
+      @keyframes stroke-reveal-2 {
+        0%, 60%   { stroke-dashoffset: 150; opacity: 0; }
+        61%       { opacity: 1; }
+        68%, 90%  { stroke-dashoffset: 0; opacity: 1; }
+        96%, 100% { opacity: 0; }
+      }
+
+      @keyframes stroke-reveal-3 {
+        0%, 74%   { stroke-dashoffset: 150; opacity: 0; }
+        75%       { opacity: 1; }
+        82%, 90%  { stroke-dashoffset: 0; opacity: 1; }
+        96%, 100% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" class="bg" rx="16" />
+
+  <g id="paint-bucket">
+    <path d="M 240,220 A 55,52 0 0,1 340,220" fill="none" stroke="#6b7280" stroke-width="4" stroke-linecap="round"/>
+    
+    <path d="M 245,220 L 250,310 A 40,12 0 0,0 330,310 L 335,220 Z" fill="#e5e7eb" stroke="#6b7280" stroke-width="4" stroke-linejoin="round"/>
+    
+    <ellipse cx="290" cy="220" rx="45" ry="15" fill="#e5e7eb" stroke="#6b7280" stroke-width="4" />
+    
+    <ellipse cx="290" cy="221" rx="41" ry="12" fill="#000000" />
+    
+    <path d="M 275,228 Q 280,245 282,250 Q 285,255 288,250 Q 290,240 295,230 Z" fill="#000000" />
+  </g>
+
+  <g id="painted-tracks">
+    <path d="M 65,150 L 200,150" class="paint-stroke stroke-1" />
+    <path d="M 65,200 L 200,200" class="paint-stroke stroke-2" />
+    <path d="M 65,250 L 200,250" class="paint-stroke stroke-3" />
+  </g>
+
+  <g class="brush-group">
+    <g transform="translate(0, 0)">
+      <path d="M -10,-60 L -5,-150 C -5,-155 5,-155 5,-150 L 10,-60 Z" fill="#991b1b" />
+      
+      <circle cx="0" cy="-140" r="3" fill="#f4f4f5" />
+      
+      <path d="M -18,-30 L -12,-60 L 12,-60 L 18,-30 Z" fill="#e5e7eb" stroke="#6b7280" stroke-width="2" stroke-linejoin="round"/>
+      <line x1="-16" y1="-40" x2="16" y2="-40" stroke="#6b7280" stroke-width="2" />
+      <line x1="-14" y1="-50" x2="14" y2="-50" stroke="#6b7280" stroke-width="2" />
+      
+      <path d="M -18,-30 C -20,-10 -15,0 -10,3 C -5,5 5,5 10,3 C 15,0 20,-10 18,-30 Z" fill="#ffffff" stroke="#6b7280" stroke-width="2" stroke-linejoin="round"/>
+      
+      <path d="M -16,-15 C -18,-5 -15,0 -10,3 C -5,5 5,5 10,3 C 15,0 16,-5 16,-15 C 12,-12 8,-17 0,-15 C -8,-13 -12,-18 -16,-15 Z" fill="#000000" />
+    </g>
+  </g>
+</svg>

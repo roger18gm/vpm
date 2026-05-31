@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { RouterView } from "vue-router";
+import VpLoadingScreen from "@/components/loading/VpLoadingScreen.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
@@ -13,8 +14,6 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="!auth.initialized" class="min-h-screen bg-page flex items-center justify-center text-muted text-sm">
-    Loading…
-  </div>
+  <VpLoadingScreen v-if="!auth.initialized" />
   <RouterView v-else />
 </template>

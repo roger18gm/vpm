@@ -1,3 +1,5 @@
+import { parseApiErrorMessage } from "@/lib/apiError";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
 
 export function resolveAssetUrl(url: string): string {
@@ -58,8 +60,8 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
   }, allowRetry);
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
+    const body = await response.text();
+    throw new Error(parseApiErrorMessage(body, response.status));
   }
 
   if (response.status === 204) {
@@ -76,8 +78,8 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
   }, true);
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Upload failed with ${response.status}`);
+    const body = await response.text();
+    throw new Error(parseApiErrorMessage(body, response.status));
   }
 
   return (await response.json()) as T;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import VpAlert from "@/components/ui/VpAlert.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpInput from "@/components/ui/VpInput.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -63,6 +64,6 @@ async function onSubmit() {
     </button>
 
     <p v-if="message" class="mt-3 text-sm text-muted">{{ message }}</p>
-    <p v-if="error" class="mt-3 text-sm text-error">{{ error }}</p>
+    <VpAlert v-if="error" class="mt-4">{{ error }}</VpAlert>
   </section>
 </template>
