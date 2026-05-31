@@ -58,9 +58,18 @@ Azure application settings:
 | `Supabase:ServiceRoleKey` | Service role key (server only) |
 | `Supabase:Bucket` | Bucket name (default `job-photos`) |
 
-## Demo crew account
+## Demo accounts (local / dev)
 
-After bootstrap, use integration-test pattern or `database/seed/dev-crew-demo.sql` notes to add a `crew` user and assign them via `PUT /api/jobs/{id}/assignments`.
+After owner bootstrap, run `database/seed/dev-crew-demo.sql` in the Supabase SQL editor (or psql). It creates:
+
+| Email | Role | Name |
+|-------|------|------|
+| `manager@visionpaint.local` | manager | Demo Manager |
+| `crew1@visionpaint.local` | crew | Alex Rivera |
+| `crew2@visionpaint.local` | crew | Jordan Lee |
+| `crew3@visionpaint.local` | crew | Sam Ortiz |
+
+All seeded accounts use the **same password as the bootstrap owner**. Assign crew to jobs via **Assign crew** in the app (`PUT /api/jobs/{id}/assignments`).
 
 ## CI test prerequisites
 
