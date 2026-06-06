@@ -1,5 +1,15 @@
 import { parseApiErrorMessage } from "@/lib/apiError";
 
+export class ApiRequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 const API_URL = import.meta.env.VITE_API_URL ?? "https://vision-paint-api.azurewebsites.net/api";
 
 export function resolveAssetUrl(url: string): string {
@@ -61,7 +71,7 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(parseApiErrorMessage(body, response.status));
+    throw new ApiRequestError(parseApiErrorMessage(body, response.status), response.status);
   }
 
   if (response.status === 204) {
@@ -79,7 +89,7 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(parseApiErrorMessage(body, response.status));
+    throw new ApiRequestError(parseApiErrorMessage(body, response.status), response.status);
   }
 
   return (await response.json()) as T;

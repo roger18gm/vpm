@@ -62,6 +62,13 @@ public sealed record JobTimeSummaryDto(
     int ActiveMinutes,
     IReadOnlyList<JobTimePersonDto> ByPerson);
 
+public sealed record JobStatusHistoryDto(
+    string? FromStatus,
+    string ToStatus,
+    DateTimeOffset ChangedAt,
+    string ChangedByName,
+    string? Reason);
+
 public sealed record JobPhotoDto(
     int Id,
     int JobId,

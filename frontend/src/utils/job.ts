@@ -1,4 +1,23 @@
-import type { Job } from "@/types/job";
+import type { Job, JobInput } from "@/types/job";
+
+export function jobToInput(job: Job, overrides: Partial<JobInput> = {}): JobInput {
+  return {
+    title: job.title,
+    description: job.description,
+    status: job.status,
+    priority: job.priority,
+    addressLine1: job.addressLine1,
+    addressLine2: job.addressLine2,
+    city: job.city,
+    stateRegion: job.stateRegion,
+    postalCode: job.postalCode,
+    countryCode: job.countryCode,
+    scheduledStartAt: job.scheduledStartAt,
+    scheduledEndAt: job.scheduledEndAt,
+    dueAt: job.dueAt,
+    ...overrides,
+  };
+}
 
 export function formatJobAddress(job: Job): string | null {
   const parts = [job.addressLine1, job.city, job.stateRegion].filter(Boolean);
@@ -23,4 +42,14 @@ export function dateInputValue(iso: string | null | undefined): string {
 export function dateToIso(date: string): string | null {
   if (!date) return null;
   return new Date(`${date}T12:00:00`).toISOString();
+}
+
+export function mapsUrl(job: Job): string | null {
+  const query = [job.addressLine1, job.city, job.stateRegion, job.postalCode].filter(Boolean).join(", ");
+  if (!query) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+export function formatMinutes(minutes: number): string {
+  return (minutes / 60).toFixed(1);
 }

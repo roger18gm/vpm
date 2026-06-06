@@ -25,6 +25,11 @@ function normalizeActive(raw: Record<string, unknown> | null): ActiveClock | nul
   };
 }
 
+export type ClockOutSummary = {
+  workMinutes: number;
+  breakMinutes: number;
+};
+
 export const useClockStore = defineStore("clock", () => {
   const active = ref<ActiveClock | null>(null);
   const now = ref(Date.now());
@@ -104,13 +109,17 @@ export const useClockStore = defineStore("clock", () => {
     active.value = { ...active.value, onBreak: false, breakStartedAt: null };
   }
 
-  async function clockOut() {
-    await request<{ workMinutes: number; breakMinutes: number }>("/time/clock-out", {
+  async function clockOut(): Promise<ClockOutSummary> {
+    const raw = await request<Record<string, unknown>>("/time/clock-out", {
       method: "POST",
       body: JSON.stringify({}),
     });
     active.value = null;
     stopTicker();
+    return {
+      workMinutes: Number(raw.workMinutes ?? raw.WorkMinutes ?? 0),
+      breakMinutes: Number(raw.breakMinutes ?? raw.BreakMinutes ?? 0),
+    };
   }
 
   return {

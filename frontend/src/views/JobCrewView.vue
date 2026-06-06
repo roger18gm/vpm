@@ -6,9 +6,11 @@ import VpCard from "@/components/ui/VpCard.vue";
 import { request } from "@/lib/api";
 import type { Job } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
+import { useToastStore } from "@/stores/toast";
 
 const props = defineProps<{ id: number }>();
 const jobsStore = useJobsStore();
+const toast = useToastStore();
 const job = ref<Job | null>(null);
 const people = ref<{ personId: number; name: string }[]>([]);
 const selected = ref<Set<number>>(new Set());
@@ -48,6 +50,7 @@ async function save() {
       body: JSON.stringify({ personIds: selectedIds.value, assignmentRole: "crew" }),
     });
     await jobsStore.fetchJobs();
+    toast.push("Crew assignments saved");
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Unable to save assignments.";
   } finally {

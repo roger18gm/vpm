@@ -6,10 +6,12 @@ import VpButton from "@/components/ui/VpButton.vue";
 import VpSelect from "@/components/ui/VpSelect.vue";
 import type { PhotoKind } from "@/types/job";
 import { usePhotosStore } from "@/stores/photos";
+import { useToastStore } from "@/stores/toast";
 
 const props = defineProps<{ id: number }>();
 const router = useRouter();
 const photosStore = usePhotosStore();
+const toast = useToastStore();
 
 const kind = ref<PhotoKind>("progress");
 const caption = ref("");
@@ -28,6 +30,7 @@ async function onSubmit() {
   error.value = null;
   try {
     await photosStore.upload(props.id, file.value, kind.value, caption.value || null);
+    toast.push("Photo uploaded");
     await router.push({ name: "job-photos", params: { id: props.id } });
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Upload failed.";

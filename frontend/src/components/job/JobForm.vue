@@ -26,6 +26,7 @@ const form = reactive({
   stateRegion: props.initial?.stateRegion ?? "",
   postalCode: props.initial?.postalCode ?? "",
   scheduledStart: dateInputValue(props.initial?.scheduledStartAt),
+  scheduledEnd: dateInputValue(props.initial?.scheduledEndAt),
   due: dateInputValue(props.initial?.dueAt),
 });
 
@@ -45,6 +46,7 @@ function onSubmit() {
     stateRegion: form.stateRegion || null,
     postalCode: form.postalCode || null,
     scheduledStartAt: toIso(form.scheduledStart),
+    scheduledEndAt: toIso(form.scheduledEnd),
     dueAt: toIso(form.due),
   });
 }
@@ -92,10 +94,14 @@ function onSubmit() {
 
     <fieldset class="bg-surface border border-border rounded-lg p-4 space-y-3">
       <legend class="text-sm font-semibold text-muted px-1">Schedule</legend>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label class="block">
           <span class="text-xs text-muted mb-1 block">Start date</span>
           <input v-model="form.scheduledStart" type="date" class="w-full border border-border rounded-md px-3 py-2.5 text-sm min-h-[44px] bg-surface" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-muted mb-1 block">End date</span>
+          <input v-model="form.scheduledEnd" type="date" class="w-full border border-border rounded-md px-3 py-2.5 text-sm min-h-[44px] bg-surface" />
         </label>
         <label class="block">
           <span class="text-xs text-muted mb-1 block">Due date</span>

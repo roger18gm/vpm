@@ -2,6 +2,7 @@
 import { RouterView } from "vue-router";
 import BottomNav from "@/components/nav/BottomNav.vue";
 import SidebarNav from "@/components/nav/SidebarNav.vue";
+import ToastHost from "@/components/ui/ToastHost.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
@@ -16,5 +17,6 @@ const auth = useAuthStore();
       </div>
     </div>
     <BottomNav />
+    <ToastHost />
   </div>
 </template>

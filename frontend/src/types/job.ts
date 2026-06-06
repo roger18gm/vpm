@@ -71,3 +71,11 @@ export type JobTimeSummary = {
   activeMinutes: number;
   byPerson: { personId: number; name: string; minutes: number; inProgress: boolean }[];
 };
+
+export type JobStatusHistoryEntry = {
+  fromStatus: string | null;
+  toStatus: string;
+  changedAt: string;
+  changedByName: string;
+  reason: string | null;
+};

@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
+import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import type { Job } from "@/types/job";
+import { formatMinutes } from "@/utils/job";
+import type { ClockOutSummary } from "@/stores/clock";
 import { useClockStore } from "@/stores/clock";
 import { useJobsStore } from "@/stores/jobs";
 
 const clock = useClockStore();
 const jobsStore = useJobsStore();
 const selectedJobId = ref<number | null>(null);
+const showClockOutConfirm = ref(false);
+const lastSummary = ref<ClockOutSummary | null>(null);
 
 if (!jobsStore.jobs.length) {
   void jobsStore.fetchJobs();
@@ -41,21 +46,50 @@ async function confirmClockIn() {
 }
 
 async function confirmClockOut() {
-  if (!confirm("Clock out now?")) return;
   busy.value = true;
   error.value = null;
   try {
-    await clock.clockOut();
+    lastSummary.value = await clock.clockOut();
+    showClockOutConfirm.value = false;
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Unable to clock out.";
   } finally {
     busy.value = false;
   }
 }
+
+function dismissSummary() {
+  lastSummary.value = null;
+}
 </script>
 
 <template>
   <PageHeader title="Clock" :subtitle="clock.isClockedIn ? undefined : 'Select a job to clock in'" />
+
+  <ConfirmDialog
+    :open="showClockOutConfirm"
+    title="Clock out?"
+    message="End your current time entry on this job."
+    confirm-label="Clock out"
+    :busy="busy"
+    @cancel="showClockOutConfirm = false"
+    @confirm="confirmClockOut"
+  />
+
+  <VpCard v-if="lastSummary" class="mb-6">
+    <template #title>Shift summary</template>
+    <dl class="text-sm space-y-2">
+      <div class="flex justify-between">
+        <dt class="text-muted">Work time</dt>
+        <dd class="font-semibold">{{ formatMinutes(lastSummary.workMinutes) }} hrs</dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-muted">Break time</dt>
+        <dd class="font-semibold">{{ formatMinutes(lastSummary.breakMinutes) }} hrs</dd>
+      </div>
+    </dl>
+    <VpButton class="mt-4" block variant="secondary" @click="dismissSummary">Done</VpButton>
+  </VpCard>
 
   <template v-if="clock.isClockedIn && clock.active">
     <VpCard class="text-center mb-6">
@@ -70,11 +104,11 @@ async function confirmClockOut() {
       <VpButton v-else variant="secondary" :disabled="busy" @click="clock.endBreak">End break</VpButton>
     </div>
 
-    <VpButton variant="danger" block :disabled="busy" @click="confirmClockOut">Clock out</VpButton>
+    <VpButton variant="danger" block :disabled="busy" @click="showClockOutConfirm = true">Clock out</VpButton>
     <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
   </template>
 
-  <template v-else>
+  <template v-else-if="!lastSummary">
     <VpCard class="mb-4">
       <p class="text-sm font-semibold text-muted mb-3">Active jobs</p>
       <button

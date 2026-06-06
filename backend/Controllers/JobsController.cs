@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using VisionPaint.Data;
 using VisionPaint.Models;
 using VisionPaint.Services;
@@ -131,6 +132,8 @@ public sealed class JobsController : ControllerBase
             UpdatedAt = now
         };
 
+        ApplyStatusSideEffects(job, string.Empty, now);
+
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         _db.Jobs.Add(job);
         await _db.SaveChangesAsync(cancellationToken);
@@ -150,7 +153,7 @@ public sealed class JobsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<Job>> UpdateJob(int id, [FromBody] Job request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Job>> UpdateJob(int id, [FromBody] JsonElement body, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetAsync(cancellationToken);
         if (currentUser is null)
@@ -171,37 +174,16 @@ public sealed class JobsController : ControllerBase
 
         var previousStatus = job.Status;
         var now = DateTimeOffset.UtcNow;
-        var status = NormalizeStatus(request.Status);
-        var priority = NormalizePriority(request.Priority);
 
-        if (!string.IsNullOrWhiteSpace(request.Status) && !IsValidStatus(status))
+        var patchError = JobUpdateApplier.Apply(job, body);
+        if (patchError is not null)
         {
-            return BadRequest(new { message = "Invalid job status." });
+            return BadRequest(new { message = patchError });
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Priority) && !IsValidPriority(priority))
-        {
-            return BadRequest(new { message = "Invalid job priority." });
-        }
-
-        job.ClientId = request.ClientId;
-        job.Title = request.Title.Trim();
-        job.Description = request.Description;
-        job.Status = string.IsNullOrWhiteSpace(request.Status) ? job.Status : status;
-        job.Priority = string.IsNullOrWhiteSpace(request.Priority) ? job.Priority : priority;
-        job.AddressLine1 = request.AddressLine1;
-        job.AddressLine2 = request.AddressLine2;
-        job.City = request.City;
-        job.StateRegion = request.StateRegion;
-        job.PostalCode = request.PostalCode;
-        job.CountryCode = request.CountryCode;
-        job.ScheduledStartAt = request.ScheduledStartAt;
-        job.ScheduledEndAt = request.ScheduledEndAt;
-        job.DueAt = request.DueAt;
-        job.StartedAt = request.StartedAt;
-        job.CompletedAt = request.CompletedAt;
-        job.ClosedAt = request.ClosedAt;
         job.UpdatedAt = now;
+
+        ApplyStatusSideEffects(job, previousStatus, now);
 
         if (!string.Equals(previousStatus, job.Status, StringComparison.OrdinalIgnoreCase))
         {
@@ -291,5 +273,27 @@ public sealed class JobsController : ControllerBase
     private static bool IsValidPriority(string priority)
     {
         return priority is "low" or "normal" or "high" or "urgent";
+    }
+
+    private static void ApplyStatusSideEffects(Job job, string previousStatus, DateTimeOffset now)
+    {
+        if (string.Equals(job.Status, "in_progress", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(previousStatus, "in_progress", StringComparison.OrdinalIgnoreCase)
+            && job.StartedAt is null)
+        {
+            job.StartedAt = now;
+        }
+
+        if (string.Equals(job.Status, "completed", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(previousStatus, "completed", StringComparison.OrdinalIgnoreCase))
+        {
+            job.CompletedAt ??= now;
+        }
+
+        if (string.Equals(job.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(previousStatus, "cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            job.ClosedAt ??= now;
+        }
     }
 }

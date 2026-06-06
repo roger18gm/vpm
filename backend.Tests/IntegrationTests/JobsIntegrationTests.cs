@@ -69,4 +69,119 @@ public sealed class JobsIntegrationTests : IClassFixture<BackendIntegrationFixtu
         Assert.Null(history.FromStatus);
         Assert.Equal("in_progress", history.ToStatus);
     }
+
+    [Fact]
+    public async Task UpdateJob_to_completed_sets_completed_at()
+    {
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
+
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new { title = "Finish me", status = "scheduled" });
+        created.EnsureSuccessStatusCode();
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+        Assert.NotNull(job);
+        Assert.Null(job!.CompletedAt);
+
+        var updated = await _fixture.Client.PutAsJsonAsync($"/api/jobs/{job.Id}", new
+        {
+            title = job.Title,
+            status = "completed"
+        });
+        updated.EnsureSuccessStatusCode();
+
+        var body = await updated.Content.ReadFromJsonAsync<Job>();
+        Assert.NotNull(body!.CompletedAt);
+    }
+
+    [Fact]
+    public async Task CreateJob_in_progress_sets_started_at()
+    {
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
+
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new { title = "Already started", status = "in_progress" });
+        created.EnsureSuccessStatusCode();
+
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+        Assert.NotNull(job!.StartedAt);
+    }
+
+    [Fact]
+    public async Task UpdateJob_status_only_preserves_schedule_dates()
+    {
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
+
+        var start = new DateTimeOffset(2026, 6, 10, 12, 0, 0, TimeSpan.Zero);
+        var end = new DateTimeOffset(2026, 6, 20, 12, 0, 0, TimeSpan.Zero);
+        var due = new DateTimeOffset(2026, 6, 25, 12, 0, 0, TimeSpan.Zero);
+
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new
+        {
+            title = "Scheduled repaint",
+            status = "scheduled",
+            scheduledStartAt = start,
+            scheduledEndAt = end,
+            dueAt = due
+        });
+        created.EnsureSuccessStatusCode();
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+        Assert.NotNull(job);
+
+        var updated = await _fixture.Client.PutAsJsonAsync($"/api/jobs/{job!.Id}", new
+        {
+            title = job.Title,
+            status = "in_progress"
+        });
+        updated.EnsureSuccessStatusCode();
+
+        var body = await updated.Content.ReadFromJsonAsync<Job>();
+        Assert.NotNull(body);
+        Assert.Equal(start, body!.ScheduledStartAt);
+        Assert.Equal(end, body.ScheduledEndAt);
+        Assert.Equal(due, body.DueAt);
+    }
+
+    [Fact]
+    public async Task UpdateJob_can_clear_due_date_when_explicitly_sent()
+    {
+        var tokens = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(tokens.AccessToken);
+
+        var due = new DateTimeOffset(2026, 6, 25, 12, 0, 0, TimeSpan.Zero);
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new
+        {
+            title = "Clear due",
+            status = "scheduled",
+            dueAt = due
+        });
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+
+        var updated = await _fixture.Client.PutAsJsonAsync($"/api/jobs/{job!.Id}", new
+        {
+            title = job.Title,
+            status = job.Status,
+            dueAt = (DateTimeOffset?)null
+        });
+        updated.EnsureSuccessStatusCode();
+
+        var body = await updated.Content.ReadFromJsonAsync<Job>();
+        Assert.Null(body!.DueAt);
+    }
 }
