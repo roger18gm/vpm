@@ -48,7 +48,7 @@ Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`
 | Environment | Storage |
 |-------------|---------|
 | Development, Testing, E2E | Local files under `%TEMP%/visionpaint-photos`, served at `/api/local-files/...` |
-| Production (Azure) | Supabase Storage via service role |
+| Production (Azure) | Supabase Storage via service role (`Supabase.Storage` client) |
 
 Azure application settings:
 
@@ -57,6 +57,9 @@ Azure application settings:
 | `Supabase:Url` | Project URL (e.g. `https://xxxx.supabase.co`) |
 | `Supabase:ServiceRoleKey` | Service role key (server only) |
 | `Supabase:Bucket` | Bucket name (default `job-photos`) |
+| `Supabase:PublicBucket` | Set `true` if the bucket is public (skips signed URLs) |
+
+Signed read URLs use the Supabase C# storage client (`CreateSignedUrl`). Upload uses `Upload` with the service role key in server-side headers only.
 
 ## Demo accounts (local / dev)
 

@@ -1,18 +1,19 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Supabase.Storage;
+using Supabase.Storage.Exceptions;
 
 namespace VisionPaint.Services;
 
 public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
 {
-    private readonly HttpClient _httpClient;
+    private const int DefaultSignedUrlExpirySeconds = 3600;
+
+    private readonly Client _client;
     private readonly JobPhotoStorageOptions _options;
 
-    public SupabaseJobPhotoStorage(HttpClient httpClient, IOptions<JobPhotoStorageOptions> options)
+    public SupabaseJobPhotoStorage(Client client, IOptions<JobPhotoStorageOptions> options)
     {
-        _httpClient = httpClient;
+        _client = client;
         _options = options.Value;
     }
 
@@ -32,19 +33,23 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
             extension = ".jpg";
         }
 
-        var storagePath = $"{companyId}/jobs/{jobId}/{Guid.NewGuid():N}{extension}";
-        var url = $"{_options.Url.TrimEnd('/')}/storage/v1/object/{_options.Bucket}/{storagePath}";
+        var storagePath = BuildStoragePath(companyId, jobId, extension);
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, cancellationToken);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ServiceRoleKey);
-        request.Content = new StreamContent(content);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        var bucket = _client.From(_options.Bucket);
+        try
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"Supabase upload failed: {(int)response.StatusCode} {body}");
+            await bucket.Upload(
+                buffer.ToArray(),
+                storagePath,
+                new Supabase.Storage.FileOptions { Upsert = false, ContentType = contentType },
+                inferContentType: false,
+                cancellationToken: cancellationToken);
+        }
+        catch (SupabaseStorageException ex)
+        {
+            throw new InvalidOperationException($"Supabase upload failed: {ex.Message}", ex);
         }
 
         return storagePath;
@@ -54,32 +59,32 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
     {
         EnsureConfigured();
 
-        var url = $"{_options.Url.TrimEnd('/')}/storage/v1/object/sign/{_options.Bucket}/{storagePath}";
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ServiceRoleKey);
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(new { expiresIn = 3600 }),
-            Encoding.UTF8,
-            "application/json");
+        var path = NormalizeStoragePath(storagePath);
+        var bucket = _client.From(_options.Bucket);
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-        if (document.RootElement.TryGetProperty("signedURL", out var signedUrl))
+        if (_options.PublicBucket)
         {
-            var path = signedUrl.GetString();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                return path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                    ? path
-                    : $"{_options.Url.TrimEnd('/')}{path}";
-            }
+            return bucket.GetPublicUrl(path, transformOptions: null);
         }
 
-        throw new InvalidOperationException("Supabase sign response did not include signedURL.");
+        try
+        {
+            return await bucket.CreateSignedUrl(path, DefaultSignedUrlExpirySeconds);
+        }
+        catch (SupabaseStorageException ex)
+        {
+            throw new InvalidOperationException($"Supabase sign failed for '{storagePath}': {ex.Message}", ex);
+        }
+    }
+
+    private static string BuildStoragePath(int companyId, int jobId, string extension)
+    {
+        return $"{companyId}/jobs/{jobId}/{Guid.NewGuid():N}{extension}";
+    }
+
+    private static string NormalizeStoragePath(string storagePath)
+    {
+        return storagePath.Trim().TrimStart('/');
     }
 
     private void EnsureConfigured()
@@ -87,6 +92,11 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
         if (string.IsNullOrWhiteSpace(_options.Url) || string.IsNullOrWhiteSpace(_options.ServiceRoleKey))
         {
             throw new InvalidOperationException("Supabase storage is not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.Bucket))
+        {
+            throw new InvalidOperationException("Supabase storage bucket is not configured.");
         }
     }
 }
