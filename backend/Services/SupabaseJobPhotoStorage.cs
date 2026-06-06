@@ -69,7 +69,20 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
 
         try
         {
-            return await bucket.CreateSignedUrl(path, DefaultSignedUrlExpirySeconds);
+            var signed = await bucket.CreateSignedUrls(
+                new List<string> { path },
+                DefaultSignedUrlExpirySeconds);
+
+            var entry = signed?.FirstOrDefault(item =>
+                string.Equals(NormalizeStoragePath(item.Path ?? string.Empty), path, StringComparison.Ordinal))
+                ?? signed?.FirstOrDefault();
+
+            if (entry is null || string.IsNullOrWhiteSpace(entry.SignedUrl))
+            {
+                throw new InvalidOperationException($"Supabase sign returned no URL for '{storagePath}'.");
+            }
+
+            return entry.SignedUrl;
         }
         catch (SupabaseStorageException ex)
         {

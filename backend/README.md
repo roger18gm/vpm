@@ -59,7 +59,7 @@ Azure application settings:
 | `Supabase:Bucket` | Bucket name (default `job-photos`) |
 | `Supabase:PublicBucket` | Set `true` if the bucket is public (skips signed URLs) |
 
-Signed read URLs use the Supabase C# storage client (`CreateSignedUrl`). Upload uses `Upload` with the service role key in server-side headers only.
+Signed read URLs use the Supabase C# storage client (`CreateSignedUrls` batch sign). Upload uses `Upload` with the service role key in server-side headers only. If a DB row points at a missing object, the list endpoint still returns metadata with an empty `url`.
 
 ## Demo accounts (local / dev)
 

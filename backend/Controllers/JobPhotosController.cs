@@ -30,17 +30,20 @@ public sealed class JobPhotosController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly IJobAccessService _jobAccess;
     private readonly IJobPhotoStorage _photoStorage;
+    private readonly ILogger<JobPhotosController> _logger;
 
     public JobPhotosController(
         AppDbContext db,
         ICurrentUserService currentUserService,
         IJobAccessService jobAccess,
-        IJobPhotoStorage photoStorage)
+        IJobPhotoStorage photoStorage,
+        ILogger<JobPhotosController> logger)
     {
         _db = db;
         _currentUserService = currentUserService;
         _jobAccess = jobAccess;
         _photoStorage = photoStorage;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -77,7 +80,7 @@ public sealed class JobPhotosController : ControllerBase
         var result = new List<JobPhotoDto>();
         foreach (var photo in photos)
         {
-            var url = await _photoStorage.GetReadUrlAsync(photo.StoragePath, cancellationToken);
+            var url = await TryGetReadUrlAsync(photo.Id, photo.StoragePath, cancellationToken);
             var uploadedBy = photo.UploadedByPersonId is int personId
                 ? names.GetValueOrDefault(personId, "Unknown")
                 : "Unknown";
@@ -179,5 +182,25 @@ public sealed class JobPhotosController : ControllerBase
             url);
 
         return CreatedAtAction(nameof(List), new { jobId }, dto);
+    }
+
+    private async Task<string> TryGetReadUrlAsync(
+        int photoId,
+        string storagePath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _photoStorage.GetReadUrlAsync(storagePath, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Could not resolve read URL for job photo {PhotoId} at {StoragePath}",
+                photoId,
+                storagePath);
+            return string.Empty;
+        }
     }
 }
