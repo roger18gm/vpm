@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import type { Job } from "@/types/job";
+import PhotoLightbox from "@/components/photo/PhotoLightbox.vue";
+import type { Job, JobPhoto } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
 import { usePhotosStore } from "@/stores/photos";
 
@@ -10,14 +11,41 @@ const jobsStore = useJobsStore();
 const photosStore = usePhotosStore();
 const job = ref<Job | null>(null);
 const photos = ref(photosStore.list(props.id));
+const loading = ref(true);
+const lightboxOpen = ref(false);
+const lightboxIndex = ref(0);
+
+const viewablePhotos = computed(() => photos.value.filter((photo) => photo.url));
 
 onMounted(async () => {
-  job.value = jobsStore.getJobFromCache(props.id) ?? (await jobsStore.fetchJob(props.id));
-  photos.value = await photosStore.fetchPhotos(props.id);
+  try {
+    job.value = jobsStore.getJobFromCache(props.id) ?? (await jobsStore.fetchJob(props.id));
+    photos.value = await photosStore.fetchPhotos(props.id);
+  } finally {
+    loading.value = false;
+  }
 });
 
 function kindLabel(kind: string) {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function openLightbox(photo: JobPhoto) {
+  if (!photo.url) {
+    return;
+  }
+
+  const index = viewablePhotos.value.findIndex((item) => item.id === photo.id);
+  if (index < 0) {
+    return;
+  }
+
+  lightboxIndex.value = index;
+  lightboxOpen.value = true;
+}
+
+function closeLightbox() {
+  lightboxOpen.value = false;
 }
 </script>
 
@@ -26,14 +54,22 @@ function kindLabel(kind: string) {
   <h1 class="text-xl font-bold mb-1">Photos</h1>
   <p class="text-sm text-muted mb-4">{{ job?.title ?? "…" }}</p>
 
-  <ul v-if="photos.length" class="space-y-4 mb-20">
+  <p v-if="loading" class="text-sm text-muted mb-20">Loading…</p>
+  <ul v-else-if="photos.length" class="space-y-4 mb-20">
     <li v-for="photo in photos" :key="photo.id" class="flex gap-3 bg-surface border border-border rounded-lg p-3">
-      <img
+      <button
         v-if="photo.url"
-        :src="photo.url"
-        alt=""
-        class="w-16 h-16 rounded-md object-cover bg-page shrink-0"
-      />
+        type="button"
+        class="shrink-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        aria-label="View photo full size"
+        @click="openLightbox(photo)"
+      >
+        <img
+          :src="photo.url"
+          alt=""
+          class="w-16 h-16 rounded-md object-cover bg-page"
+        />
+      </button>
       <div
         v-else
         class="w-16 h-16 rounded-md bg-page border border-border shrink-0 flex items-center justify-center text-[10px] text-muted text-center px-1"
@@ -48,6 +84,14 @@ function kindLabel(kind: string) {
     </li>
   </ul>
   <p v-else class="text-sm text-muted mb-20">No photos yet.</p>
+
+  <PhotoLightbox
+    :open="lightboxOpen"
+    :photos="viewablePhotos"
+    :index="lightboxIndex"
+    @close="closeLightbox"
+    @update:index="lightboxIndex = $event"
+  />
 
   <RouterLink
     :to="{ name: 'job-photo-upload', params: { id } }"
