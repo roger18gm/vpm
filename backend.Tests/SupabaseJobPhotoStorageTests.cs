@@ -50,6 +50,17 @@ public sealed class SupabaseJobPhotoStorageTests
     }
 
     [Fact]
+    public void NormalizeSignedUrl_strips_trailing_question_mark_from_library_urls()
+    {
+        var url = SupabaseJobPhotoStorage.NormalizeSignedUrl(
+            "https://example.supabase.co/storage/v1/object/sign/job-photos/1/jobs/7/photo.png?token=abc?");
+
+        Assert.Equal(
+            "https://example.supabase.co/storage/v1/object/sign/job-photos/1/jobs/7/photo.png?token=abc",
+            url);
+    }
+
+    [Fact]
     public async Task GetReadUrlAsync_throws_when_supabase_is_not_configured()
     {
         var client = SupabaseStorageClientFactory.Create(new JobPhotoStorageOptions

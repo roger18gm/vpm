@@ -64,7 +64,7 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
 
         if (_options.PublicBucket)
         {
-            return bucket.GetPublicUrl(path, transformOptions: null);
+            return NormalizeSignedUrl(bucket.GetPublicUrl(path, transformOptions: null));
         }
 
         try
@@ -82,12 +82,20 @@ public sealed class SupabaseJobPhotoStorage : IJobPhotoStorage
                 throw new InvalidOperationException($"Supabase sign returned no URL for '{storagePath}'.");
             }
 
-            return entry.SignedUrl;
+            return NormalizeSignedUrl(entry.SignedUrl);
         }
         catch (SupabaseStorageException ex)
         {
             throw new InvalidOperationException($"Supabase sign failed for '{storagePath}': {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Supabase.Storage appends "?{downloadQueryParams}" even when empty, leaving a trailing "?".
+    /// </summary>
+    public static string NormalizeSignedUrl(string signedUrl)
+    {
+        return signedUrl.TrimEnd('?');
     }
 
     private static string BuildStoragePath(int companyId, int jobId, string extension)
