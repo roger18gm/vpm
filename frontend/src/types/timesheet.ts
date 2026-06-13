@@ -42,3 +42,12 @@ export type PersonSummary = {
   email: string | null;
   companyRole: string;
 };
+
+export type TimeEntryInput = {
+  jobId: number;
+  clockInAt: string;
+  clockOutAt: string;
+  breakMinutes: number;
+  notes?: string | null;
+  personId?: number | null;
+};

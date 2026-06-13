@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { WeeklyTimesheetDay } from "@/types/timesheet";
+import VpButton from "@/components/ui/VpButton.vue";
+import type { WeeklyTimesheetDay, WeeklyTimesheetSession } from "@/types/timesheet";
 import { formatMinutes } from "@/utils/job";
 import { formatBreakType, formatClockRange } from "@/utils/time";
 
 defineProps<{
   day: WeeklyTimesheetDay;
   timezoneId: string;
+  canManage: boolean;
+  canEditSession: (session: WeeklyTimesheetSession) => boolean;
+  canDeleteSession: (session: WeeklyTimesheetSession) => boolean;
+}>();
+
+const emit = defineEmits<{
+  add: [];
+  edit: [session: WeeklyTimesheetSession];
+  delete: [session: WeeklyTimesheetSession];
 }>();
 
 const expanded = ref(false);
@@ -30,7 +40,7 @@ const expanded = ref(false);
       <template v-if="day.sessions.length">
         <div v-for="session in day.sessions" :key="session.timeEntryId" class="mt-3">
           <div class="flex justify-between gap-2 text-sm">
-            <div>
+            <div class="min-w-0">
               <p class="font-semibold">{{ session.jobTitle }}</p>
               <p class="text-xs text-muted">
                 {{ formatClockRange(session.clockInAt, session.clockOutAt, timezoneId) }}
@@ -52,9 +62,40 @@ const expanded = ref(false);
               ({{ formatMinutes(brk.minutes) }} hrs)
             </li>
           </ul>
+          <p v-if="session.inProgress && !canEditSession(session)" class="text-xs text-muted mt-2">
+            Use the Clock tab to end this active shift.
+          </p>
+          <div v-if="canEditSession(session) || canDeleteSession(session)" class="flex gap-2 mt-2">
+            <VpButton
+              v-if="canEditSession(session)"
+              variant="secondary"
+              class="!min-h-[36px] !py-1.5 text-xs"
+              @click="emit('edit', session)"
+            >
+              Edit
+            </VpButton>
+            <VpButton
+              v-if="canDeleteSession(session)"
+              variant="danger"
+              class="!min-h-[36px] !py-1.5 text-xs"
+              @click="emit('delete', session)"
+            >
+              Delete
+            </VpButton>
+          </div>
         </div>
       </template>
       <p v-else class="text-sm text-muted mt-3">No sessions.</p>
+
+      <VpButton
+        v-if="canManage"
+        variant="secondary"
+        block
+        class="mt-4"
+        @click="emit('add')"
+      >
+        Add time
+      </VpButton>
     </div>
   </div>
 </template>

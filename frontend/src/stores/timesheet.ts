@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { request } from "@/lib/api";
-import type { PersonSummary, WeeklyTimesheet } from "@/types/timesheet";
+import type { PersonSummary, TimeEntryInput, WeeklyTimesheet } from "@/types/timesheet";
 import { isManagerRole } from "@/types/auth";
 import { useAuthStore } from "@/stores/auth";
 import { plainDateToIso, parsePlainDate, shiftWeek, sundayOfWeek } from "@/utils/week";
@@ -61,6 +61,51 @@ export const useTimesheetStore = defineStore("timesheet", () => {
 
   const canPickPerson = computed(() => isManagerRole(auth.user?.companyRole));
 
+  const isCurrentWeek = computed(
+    () => weekStart.value === plainDateToIso(sundayOfWeek())
+  );
+
+  const canManageTimesheet = computed(() => {
+    if (canPickPerson.value) return true;
+    const viewingSelf =
+      selectedPersonId.value === auth.user?.personId || selectedPersonId.value === null;
+    return viewingSelf && isCurrentWeek.value;
+  });
+
+  async function createEntry(input: TimeEntryInput) {
+    await request("/time/entries", {
+      method: "POST",
+      body: JSON.stringify({
+        jobId: input.jobId,
+        clockInAt: input.clockInAt,
+        clockOutAt: input.clockOutAt,
+        breakMinutes: input.breakMinutes,
+        notes: input.notes ?? null,
+        personId: input.personId ?? null,
+      }),
+    });
+    await fetchWeekly();
+  }
+
+  async function updateEntry(entryId: number, input: Omit<TimeEntryInput, "personId">) {
+    await request(`/time/entries/${entryId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        jobId: input.jobId,
+        clockInAt: input.clockInAt,
+        clockOutAt: input.clockOutAt,
+        breakMinutes: input.breakMinutes,
+        notes: input.notes ?? null,
+      }),
+    });
+    await fetchWeekly();
+  }
+
+  async function deleteEntry(entryId: number) {
+    await request<void>(`/time/entries/${entryId}`, { method: "DELETE" });
+    await fetchWeekly();
+  }
+
   async function fetchPeople() {
     if (!canPickPerson.value) return;
     const raw = await request<Record<string, unknown>[]>("/people");
@@ -104,8 +149,13 @@ export const useTimesheetStore = defineStore("timesheet", () => {
     loading,
     error,
     canPickPerson,
+    canManageTimesheet,
+    isCurrentWeek,
     fetchPeople,
     fetchWeekly,
+    createEntry,
+    updateEntry,
+    deleteEntry,
     goToPreviousWeek,
     goToNextWeek,
     resetToCurrentWeek,

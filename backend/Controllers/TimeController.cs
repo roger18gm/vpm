@@ -148,4 +148,76 @@ public sealed class TimeController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("entries")]
+    public async Task<ActionResult<WeeklyTimesheetSessionDto>> CreateEntry(
+        [FromBody] CreateTimeEntryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var (result, error, statusCode) = await _timeEntryService.CreateManualEntryAsync(
+            currentUser,
+            request,
+            cancellationToken);
+
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return StatusCode(statusCode, result);
+    }
+
+    [HttpPut("entries/{entryId:int}")]
+    public async Task<ActionResult<WeeklyTimesheetSessionDto>> UpdateEntry(
+        int entryId,
+        [FromBody] UpdateTimeEntryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var (result, error, statusCode) = await _timeEntryService.UpdateEntryAsync(
+            currentUser,
+            entryId,
+            request,
+            cancellationToken);
+
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpDelete("entries/{entryId:int}")]
+    public async Task<IActionResult> DeleteEntry(int entryId, CancellationToken cancellationToken)
+    {
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var (success, error, statusCode) = await _timeEntryService.DeleteEntryAsync(
+            currentUser,
+            entryId,
+            cancellationToken);
+
+        if (!success)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return NoContent();
+    }
 }

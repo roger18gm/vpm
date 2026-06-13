@@ -55,6 +55,21 @@ public sealed record ClockOutRequest(string? Notes);
 
 public sealed record ClockOutSummaryDto(int WorkMinutes, int BreakMinutes, DateTimeOffset ClockOutAt);
 
+public sealed record CreateTimeEntryRequest(
+    int JobId,
+    DateTimeOffset ClockInAt,
+    DateTimeOffset ClockOutAt,
+    int? PersonId,
+    int BreakMinutes = 0,
+    string? Notes = null);
+
+public sealed record UpdateTimeEntryRequest(
+    int JobId,
+    DateTimeOffset ClockInAt,
+    DateTimeOffset ClockOutAt,
+    int BreakMinutes = 0,
+    string? Notes = null);
+
 public sealed record TimeBreakWindowDto(
     int Id,
     DateTimeOffset BreakStartAt,
