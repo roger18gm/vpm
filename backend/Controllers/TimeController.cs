@@ -111,4 +111,41 @@ public sealed class TimeController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("weekly")]
+    public async Task<ActionResult<WeeklyTimesheetDto>> GetWeekly(
+        [FromQuery] string? weekStart,
+        [FromQuery] int? personId,
+        CancellationToken cancellationToken)
+    {
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        DateOnly? parsedWeekStart = null;
+        if (!string.IsNullOrWhiteSpace(weekStart))
+        {
+            if (!DateOnly.TryParse(weekStart, out var date))
+            {
+                return BadRequest(new { message = "weekStart must be YYYY-MM-DD." });
+            }
+
+            parsedWeekStart = date;
+        }
+
+        var (result, error, statusCode) = await _timeEntryService.GetWeeklyTimesheetAsync(
+            currentUser,
+            parsedWeekStart,
+            personId,
+            cancellationToken);
+
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return Ok(result);
+    }
 }

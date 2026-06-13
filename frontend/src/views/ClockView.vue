@@ -4,6 +4,7 @@ import PageHeader from "@/components/layout/PageHeader.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpCard from "@/components/ui/VpCard.vue";
+import WeeklyTimesheet from "@/components/time/WeeklyTimesheet.vue";
 import type { Job } from "@/types/job";
 import { formatMinutes } from "@/utils/job";
 import type { ClockOutSummary } from "@/stores/clock";
@@ -12,6 +13,7 @@ import { useJobsStore } from "@/stores/jobs";
 
 const clock = useClockStore();
 const jobsStore = useJobsStore();
+const activeTab = ref<"clock" | "week">("clock");
 const selectedJobId = ref<number | null>(null);
 const showClockOutConfirm = ref(false);
 const lastSummary = ref<ClockOutSummary | null>(null);
@@ -64,68 +66,102 @@ function dismissSummary() {
 </script>
 
 <template>
-  <PageHeader title="Clock" :subtitle="clock.isClockedIn ? undefined : 'Select a job to clock in'" />
-
-  <ConfirmDialog
-    :open="showClockOutConfirm"
-    title="Clock out?"
-    message="End your current time entry on this job."
-    confirm-label="Clock out"
-    :busy="busy"
-    @cancel="showClockOutConfirm = false"
-    @confirm="confirmClockOut"
+  <template v-if="activeTab === 'clock'">
+  <PageHeader
+    title="Clock"
+    :subtitle="!clock.isClockedIn ? 'Select a job to clock in' : 'Manage your current shift and breaks'"
   />
-
-  <VpCard v-if="lastSummary" class="mb-6">
-    <template #title>Shift summary</template>
-    <dl class="text-sm space-y-2">
-      <div class="flex justify-between">
-        <dt class="text-muted">Work time</dt>
-        <dd class="font-semibold">{{ formatMinutes(lastSummary.workMinutes) }} hrs</dd>
-      </div>
-      <div class="flex justify-between">
-        <dt class="text-muted">Break time</dt>
-        <dd class="font-semibold">{{ formatMinutes(lastSummary.breakMinutes) }} hrs</dd>
-      </div>
-    </dl>
-    <VpButton class="mt-4" block variant="secondary" @click="dismissSummary">Done</VpButton>
-  </VpCard>
-
-  <template v-if="clock.isClockedIn && clock.active">
-    <VpCard class="text-center mb-6">
-      <p class="text-sm text-muted mb-1">Working on</p>
-      <h2 class="text-lg font-bold mb-4">{{ clock.active.jobTitle }}</h2>
-      <p class="text-4xl font-mono font-semibold text-primary tabular-nums">{{ clock.elapsedDisplay }}</p>
-      <p v-if="clock.active.onBreak" class="text-xs text-amber-700 mt-2">On break</p>
-    </VpCard>
-
-    <div class="grid grid-cols-2 gap-3 mb-4">
-      <VpButton v-if="!clock.active.onBreak" variant="secondary" :disabled="busy" @click="clock.startBreak">Start break</VpButton>
-      <VpButton v-else variant="secondary" :disabled="busy" @click="clock.endBreak">End break</VpButton>
-    </div>
-
-    <VpButton variant="danger" block :disabled="busy" @click="showClockOutConfirm = true">Clock out</VpButton>
-    <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
+  </template>
+  <template v-if="activeTab === 'week'">
+  <PageHeader 
+    title="Clock"
+    subtitle="Time entries for the current week."
+  />
   </template>
 
-  <template v-else-if="!lastSummary">
-    <VpCard class="mb-4">
-      <p class="text-sm font-semibold text-muted mb-3">Active jobs</p>
-      <button
-        v-for="job in assignableJobs()"
-        :key="job.id"
-        type="button"
-        class="w-full text-left border rounded-lg p-4 mb-2 last:mb-0"
-        :class="selectedJobId === job.id ? 'border-primary ring-2 ring-primary/20' : 'border-border'"
-        @click="selectJob(job)"
-      >
-        <span class="font-semibold block">{{ job.title }}</span>
-        <span class="text-xs text-muted">{{ job.addressLine1 ?? "No address" }}</span>
-      </button>
-      <p v-if="!assignableJobs().length" class="text-sm text-muted">No active jobs to clock into.</p>
+  <div class="flex border border-border rounded-lg overflow-hidden mb-6">
+    <button
+      type="button"
+      class="flex-1 py-2.5 text-sm font-semibold"
+      :class="activeTab === 'clock' ? 'bg-primary text-white' : 'bg-surface text-muted'"
+      @click="activeTab = 'clock'"
+    >
+      Clock
+    </button>
+    <button
+      type="button"
+      class="flex-1 py-2.5 text-sm font-semibold"
+      :class="activeTab === 'week' ? 'bg-primary text-white' : 'bg-surface text-muted'"
+      @click="activeTab = 'week'"
+    >
+      This week
+    </button>
+  </div>
+
+  <WeeklyTimesheet v-if="activeTab === 'week'" />
+
+  <template v-else>
+    <ConfirmDialog
+      :open="showClockOutConfirm"
+      title="Clock out?"
+      message="End your current time entry on this job."
+      confirm-label="Clock out"
+      :busy="busy"
+      @cancel="showClockOutConfirm = false"
+      @confirm="confirmClockOut"
+    />
+
+    <VpCard v-if="lastSummary" class="mb-6">
+      <template #title>Shift summary</template>
+      <dl class="text-sm space-y-2">
+        <div class="flex justify-between">
+          <dt class="text-muted">Work time</dt>
+          <dd class="font-semibold">{{ formatMinutes(lastSummary.workMinutes) }} hrs</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-muted">Break time</dt>
+          <dd class="font-semibold">{{ formatMinutes(lastSummary.breakMinutes) }} hrs</dd>
+        </div>
+      </dl>
+      <VpButton class="mt-4" block variant="secondary" @click="dismissSummary">Done</VpButton>
     </VpCard>
 
-    <VpButton block :disabled="!selectedJobId || busy" @click="confirmClockIn">Clock in</VpButton>
-    <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
+    <template v-if="clock.isClockedIn && clock.active">
+      <VpCard class="text-center mb-6">
+        <p class="text-sm text-muted mb-1">Working on</p>
+        <h2 class="text-lg font-bold mb-4">{{ clock.active.jobTitle }}</h2>
+        <p class="text-4xl font-mono font-semibold text-primary tabular-nums">{{ clock.elapsedDisplay }}</p>
+        <p v-if="clock.active.onBreak" class="text-xs text-amber-700 mt-2">On break</p>
+      </VpCard>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <VpButton v-if="!clock.active.onBreak" variant="secondary" :disabled="busy" @click="clock.startBreak">Start break</VpButton>
+        <VpButton v-else variant="secondary" :disabled="busy" @click="clock.endBreak">End break</VpButton>
+      </div>
+
+      <VpButton variant="danger" block :disabled="busy" @click="showClockOutConfirm = true">Clock out</VpButton>
+      <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
+    </template>
+
+    <template v-else-if="!lastSummary">
+      <VpCard class="mb-4">
+        <p class="text-sm font-semibold text-muted mb-3">Active jobs</p>
+        <button
+          v-for="job in assignableJobs()"
+          :key="job.id"
+          type="button"
+          class="w-full text-left border rounded-lg p-4 mb-2 last:mb-0"
+          :class="selectedJobId === job.id ? 'border-primary ring-2 ring-primary/20' : 'border-border'"
+          @click="selectJob(job)"
+        >
+          <span class="font-semibold block">{{ job.title }}</span>
+          <span class="text-xs text-muted">{{ job.addressLine1 ?? "No address" }}</span>
+        </button>
+        <p v-if="!assignableJobs().length" class="text-sm text-muted">No active jobs to clock into.</p>
+      </VpCard>
+
+      <VpButton block :disabled="!selectedJobId || busy" @click="confirmClockIn">Clock in</VpButton>
+      <p v-if="error" class="text-xs text-error text-center mt-3">{{ error }}</p>
+    </template>
   </template>
 </template>

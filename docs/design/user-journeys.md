@@ -82,6 +82,33 @@ sequenceDiagram
 
 ---
 
+## J2b — Crew reviews weekly hours
+
+**Actor:** `crew`  
+**Goal:** See total hours and breaks per day for the current work week.
+
+| Step | Action | Screen |
+|------|--------|--------|
+| 1 | Open Clock → **This week** | SCR-010 |
+| 2 | Review daily totals | SCR-010 |
+| 3 | Expand a day to see jobs and breaks | SCR-010 |
+| 4 | (Optional) Navigate to previous week | SCR-010 |
+
+---
+
+## J2c — Manager reviews worker timesheet
+
+**Actor:** `manager`, `owner`, `admin`  
+**Goal:** Review any company member’s weekly hours.
+
+| Step | Action | Screen |
+|------|--------|--------|
+| 1 | Open Clock → **This week** | SCR-010 |
+| 2 | Select worker from person picker | SCR-010 |
+| 3 | Review / expand days as needed | SCR-010 |
+
+---
+
 ## J3 — Manager creates a job and assigns crew
 
 **Actor:** `manager` (also `owner`, `admin`)  

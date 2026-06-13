@@ -36,7 +36,7 @@ Authorization rules: [auth design](../superpowers/specs/2026-05-07-auth-design.m
 | SCR-007 | Job detail                 | `/jobs/:id`            | all (scoped)          | P0       | `GET /api/jobs/:id`                           |
 | SCR-008 | Edit job                   | `/jobs/:id/edit`       | owner, admin, manager | P1       | `PUT /api/jobs/:id`                           |
 | SCR-009 | Assign crew                | `/jobs/:id/crew`       | owner, admin, manager | P1       | `job_assignment` API (planned)                |
-| SCR-010 | Clock (hub)                | `/clock`               | all                   | P0       | `time_entry` API (planned)                    |
+| SCR-010 | Clock (hub)                | `/clock`               | all                   | P0       | `GET/POST /api/time/*`, `GET /api/time/weekly` |
 | SCR-011 | Photo timeline             | `/jobs/:id/photos`     | assigned + managers   | P0       | `job_photo` + storage (planned)               |
 | SCR-012 | Upload photo               | `/jobs/:id/photos/new` | assigned + managers   | P0       | storage upload (planned)                      |
 | SCR-013 | Account                    | `/account`             | all authenticated     | P1       | `GET /api/auth/status`                        |

@@ -55,6 +55,40 @@ public sealed record ClockOutRequest(string? Notes);
 
 public sealed record ClockOutSummaryDto(int WorkMinutes, int BreakMinutes, DateTimeOffset ClockOutAt);
 
+public sealed record TimeBreakWindowDto(
+    int Id,
+    DateTimeOffset BreakStartAt,
+    DateTimeOffset? BreakEndAt,
+    string BreakType,
+    int Minutes);
+
+public sealed record WeeklyTimesheetSessionDto(
+    int TimeEntryId,
+    int JobId,
+    string JobTitle,
+    DateTimeOffset ClockInAt,
+    DateTimeOffset? ClockOutAt,
+    int WorkMinutes,
+    int BreakMinutes,
+    bool InProgress,
+    IReadOnlyList<TimeBreakWindowDto> Breaks);
+
+public sealed record WeeklyTimesheetDayDto(
+    string Date,
+    string DayLabel,
+    int WorkMinutes,
+    int BreakMinutes,
+    IReadOnlyList<WeeklyTimesheetSessionDto> Sessions);
+
+public sealed record WeeklyTimesheetDto(
+    int PersonId,
+    string PersonName,
+    string WeekStartDate,
+    string TimezoneId,
+    int WeekTotalWorkMinutes,
+    int WeekTotalBreakMinutes,
+    IReadOnlyList<WeeklyTimesheetDayDto> Days);
+
 public sealed record JobTimePersonDto(int PersonId, string Name, int Minutes, bool InProgress);
 
 public sealed record JobTimeSummaryDto(

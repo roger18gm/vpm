@@ -249,20 +249,29 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 **Wireframe:** [wireframes/crew-clock.html](./wireframes/crew-clock.html)  
 **Roles:** all
 
-**Not clocked in:**
+**Tabs:** **Clock** (default) | **This week**
+
+**Clock tab — not clocked in:**
 
 - Message: “Select a job to clock in.”
 - List of assigned active jobs (same filter as SCR-005) OR deep link from SCR-007 only for MVP.
 - Large **Clock in** on selected job.
 
-**Clocked in:**
+**Clock tab — clocked in:**
 
 - Job title (large).
 - Elapsed timer (live).
 - **Start break** / **End break** (toggle).
 - **Clock out** (secondary destructive confirm).
 
-**API (planned):** `POST/PUT time_entry`, `GET` open entry for current user.
+**This week tab:**
+
+- Week range label with ← / → navigation (Sunday-start week).
+- Seven expandable day rows (Sun–Sat): work hours + break hours collapsed; expanded shows job sessions and break windows.
+- Managers+: person picker (`GET /api/people`) to view any worker’s timesheet.
+- Crew: own timesheet only.
+
+**API:** `GET /api/time/active`, `POST /api/time/clock-in`, `POST /api/time/clock-out`, `POST /api/time/break/start`, `POST /api/time/break/end`, `GET /api/time/weekly`.
 
 ---
 
