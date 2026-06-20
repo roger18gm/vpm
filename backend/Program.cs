@@ -44,6 +44,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ICompanyAuthorizationService, CompanyAuthorizationService>();
 builder.Services.AddScoped<IJobAccessService, JobAccessService>();
 builder.Services.AddScoped<TimeEntryService>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
 
 if (isCiTestEnvironment || builder.Environment.IsDevelopment())

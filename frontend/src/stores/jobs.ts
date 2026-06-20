@@ -2,14 +2,24 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { request } from "@/lib/api";
 import type { Job, JobDetail, JobInput } from "@/types/job";
-import { isJobOverdue } from "@/utils/job";
+import { isJobDueSoon, isJobOverdue } from "@/utils/job";
 
 export const useJobsStore = defineStore("jobs", () => {
   const jobs = ref<Job[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const overdueJobs = computed(() => jobs.value.filter((job) => isJobOverdue(job)));
+  const overdueJobs = computed(() =>
+    jobs.value
+      .filter((job) => isJobOverdue(job))
+      .sort((a, b) => new Date(a.dueAt!).getTime() - new Date(b.dueAt!).getTime()),
+  );
+
+  const dueSoonJobs = computed(() =>
+    jobs.value
+      .filter((job) => isJobDueSoon(job))
+      .sort((a, b) => new Date(a.dueAt!).getTime() - new Date(b.dueAt!).getTime()),
+  );
 
   const activeCount = computed(() => jobs.value.filter((j) => j.status !== "completed" && j.status !== "cancelled").length);
   const inProgressCount = computed(() => jobs.value.filter((j) => j.status === "in_progress").length);
@@ -63,6 +73,7 @@ export const useJobsStore = defineStore("jobs", () => {
     loading,
     error,
     overdueJobs,
+    dueSoonJobs,
     activeCount,
     inProgressCount,
     fetchJobs,

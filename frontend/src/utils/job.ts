@@ -30,6 +30,16 @@ export function isJobOverdue(job: Job, now = new Date()): boolean {
   return new Date(job.dueAt) < now;
 }
 
+export function isJobDueSoon(job: Job, now = new Date(), withinDays = 7): boolean {
+  if (!job.dueAt) return false;
+  if (job.status === "completed" || job.status === "cancelled") return false;
+  if (isJobOverdue(job, now)) return false;
+  const due = new Date(job.dueAt);
+  const limit = new Date(now);
+  limit.setDate(limit.getDate() + withinDays);
+  return due <= limit;
+}
+
 export function statusLabel(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

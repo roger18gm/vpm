@@ -104,6 +104,19 @@ public sealed record WeeklyTimesheetDto(
     int WeekTotalBreakMinutes,
     IReadOnlyList<WeeklyTimesheetDayDto> Days);
 
+public sealed record ClockedInWorkerDto(
+    int PersonId,
+    string Name,
+    int JobId,
+    string JobTitle,
+    DateTimeOffset ClockInAt,
+    bool OnBreak);
+
+public sealed record DashboardSummaryDto(
+    int HoursThisWeekMinutes,
+    int CompletedThisWeekCount,
+    IReadOnlyList<ClockedInWorkerDto> ClockedInWorkers);
+
 public sealed record JobTimePersonDto(int PersonId, string Name, int Minutes, bool InProgress);
 
 public sealed record JobTimeSummaryDto(
