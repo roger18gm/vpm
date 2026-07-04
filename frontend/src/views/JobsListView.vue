@@ -5,20 +5,29 @@ import { Icon } from "@iconify/vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import JobCard from "@/components/job/JobCard.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
+import VpInput from "@/components/ui/VpInput.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useJobsStore } from "@/stores/jobs";
+import { matchesJobSearch } from "@/utils/job";
 
 const auth = useAuthStore();
 const jobsStore = useJobsStore();
 const filter = ref("all");
+const searchQuery = ref("");
 
 onMounted(() => {
   void jobsStore.fetchJobs();
 });
 
 const filteredJobs = computed(() => {
-  if (filter.value === "all") return jobsStore.jobs;
-  return jobsStore.jobs.filter((j) => j.status === filter.value);
+  let rows = jobsStore.jobs;
+  if (filter.value !== "all") {
+    rows = rows.filter((job) => job.status === filter.value);
+  }
+  if (searchQuery.value.trim()) {
+    rows = rows.filter((job) => matchesJobSearch(job, searchQuery.value));
+  }
+  return rows;
 });
 
 const filters = [
@@ -27,6 +36,22 @@ const filters = [
   { id: "in_progress", label: "In progress" },
   { id: "completed", label: "Completed" },
 ];
+
+const emptyMessage = computed(() => {
+  if (searchQuery.value.trim()) {
+    return "Try a different title or address.";
+  }
+  return auth.isManager
+    ? "Create your first job to get started."
+    : "Contact your manager if you expect work here.";
+});
+
+const emptyTitle = computed(() => {
+  if (searchQuery.value.trim()) {
+    return "No matching jobs";
+  }
+  return auth.isManager ? "No jobs yet" : "No jobs assigned yet";
+});
 </script>
 
 <template>
@@ -38,6 +63,13 @@ const filters = [
       </RouterLink>
     </template>
   </PageHeader>
+
+  <VpInput
+    v-model="searchQuery"
+    label="Search"
+    placeholder="Title or address"
+    class="mb-4"
+  />
 
   <div v-if="auth.isManager" class="flex gap-2 flex-wrap mb-4">
     <button
@@ -63,10 +95,10 @@ const filters = [
 
   <EmptyState
     v-else
-    :title="auth.isManager ? 'No jobs yet' : 'No jobs assigned yet'"
-    :message="auth.isManager ? 'Create your first job to get started.' : 'Contact your manager if you expect work here.'"
+    :title="emptyTitle"
+    :message="emptyMessage"
   >
-    <template v-if="auth.isManager" #action>
+    <template v-if="auth.isManager && !searchQuery.trim()" #action>
       <RouterLink to="/jobs/new" class="text-primary font-semibold text-sm">Create job</RouterLink>
     </template>
   </EmptyState>

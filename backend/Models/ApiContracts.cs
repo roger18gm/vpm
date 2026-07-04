@@ -31,6 +31,31 @@ public sealed record JobDetailResponse(
     DateTimeOffset UpdatedAt,
     IReadOnlyList<JobAssignmentDto> Assignments);
 
+public sealed record JobListItemResponse(
+    int Id,
+    int CompanyId,
+    int? ClientId,
+    int? CreatedByPersonId,
+    string Title,
+    string? Description,
+    string Status,
+    string Priority,
+    string? AddressLine1,
+    string? AddressLine2,
+    string? City,
+    string? StateRegion,
+    string? PostalCode,
+    string? CountryCode,
+    DateTimeOffset? ScheduledStartAt,
+    DateTimeOffset? ScheduledEndAt,
+    DateTimeOffset? DueAt,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? CompletedAt,
+    DateTimeOffset? ClosedAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    int PhotoCount);
+
 public sealed record PersonSummaryDto(
     int PersonId,
     string Name,

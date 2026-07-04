@@ -24,6 +24,7 @@ export type Job = {
   closedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  photoCount?: number;
 };
 
 export type JobInput = {

@@ -31,7 +31,7 @@ public sealed class JobsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Job>>> GetJobs(
+    public async Task<ActionResult<List<JobListItemResponse>>> GetJobs(
         [FromQuery] bool includeCancelled,
         CancellationToken cancellationToken)
     {
@@ -52,7 +52,21 @@ public sealed class JobsController : ControllerBase
             .ThenByDescending(job => job.Id)
             .ToListAsync(cancellationToken);
 
-        return Ok(jobs);
+        var jobIds = jobs.Select(job => job.Id).ToList();
+        var photoCounts = jobIds.Count == 0
+            ? new Dictionary<int, int>()
+            : await _db.JobPhotos
+                .AsNoTracking()
+                .Where(photo => jobIds.Contains(photo.JobId))
+                .GroupBy(photo => photo.JobId)
+                .Select(group => new { JobId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(item => item.JobId, item => item.Count, cancellationToken);
+
+        var result = jobs
+            .Select(job => JobAssignmentHelper.ToListItemResponse(job, photoCounts.GetValueOrDefault(job.Id, 0)))
+            .ToList();
+
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]

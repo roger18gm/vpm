@@ -51,4 +51,32 @@ internal static class JobAssignmentHelper
             job.UpdatedAt,
             assignments);
     }
+
+    public static JobListItemResponse ToListItemResponse(Job job, int photoCount)
+    {
+        return new JobListItemResponse(
+            job.Id,
+            job.CompanyId,
+            job.ClientId,
+            job.CreatedByPersonId,
+            job.Title,
+            job.Description,
+            job.Status,
+            job.Priority,
+            job.AddressLine1,
+            job.AddressLine2,
+            job.City,
+            job.StateRegion,
+            job.PostalCode,
+            job.CountryCode,
+            job.ScheduledStartAt,
+            job.ScheduledEndAt,
+            job.DueAt,
+            job.StartedAt,
+            job.CompletedAt,
+            job.ClosedAt,
+            job.CreatedAt,
+            job.UpdatedAt,
+            photoCount);
+    }
 }

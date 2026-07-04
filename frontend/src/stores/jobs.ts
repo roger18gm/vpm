@@ -68,6 +68,12 @@ export const useJobsStore = defineStore("jobs", () => {
     return jobs.value.find((job) => job.id === id);
   }
 
+  function incrementPhotoCount(jobId: number) {
+    jobs.value = jobs.value.map((job) =>
+      job.id === jobId ? { ...job, photoCount: (job.photoCount ?? 0) + 1 } : job,
+    );
+  }
+
   return {
     jobs,
     loading,
@@ -82,5 +88,6 @@ export const useJobsStore = defineStore("jobs", () => {
     updateJob,
     archiveJob,
     getJobFromCache,
+    incrementPhotoCount,
   };
 });

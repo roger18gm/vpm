@@ -44,7 +44,7 @@ function formatClockIn(iso: string): string {
     </template>
   </PageHeader>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     <VpCard>
       <p class="text-xs text-muted">Active</p>
       <p class="text-2xl font-bold">{{ jobsStore.activeCount }}</p>
@@ -54,10 +54,15 @@ function formatClockIn(iso: string): string {
       <p class="text-2xl font-bold">{{ jobsStore.inProgressCount }}</p>
     </VpCard>
     <VpCard>
+      <p class="text-xs text-muted">Completed this week</p>
+      <p v-if="dashboardStore.loading && !dashboardStore.summary" class="text-2xl font-bold">—</p>
+      <p v-else class="text-2xl font-bold">{{ completedThisWeek }}</p>
+    </VpCard>
+    <VpCard>
       <p class="text-xs text-muted">Overdue</p>
       <p class="text-2xl font-bold text-primary">{{ jobsStore.overdueJobs.length }}</p>
     </VpCard>
-    <div class="col-span-2 md:col-span-1">
+    <div class="col-span-2 md:col-span-4">
       <VpCard>
         <p class="text-xs text-muted">Hours this week</p>
         <p v-if="dashboardStore.loading && !dashboardStore.summary" class="text-2xl font-bold">—</p>
@@ -65,11 +70,6 @@ function formatClockIn(iso: string): string {
       </VpCard>
     </div>
   </div>
-
-  <p class="text-sm text-muted mb-6">
-    Completed this week:
-    <span class="font-semibold text-text">{{ completedThisWeek }}</span>
-  </p>
 
   <p v-if="dashboardStore.error" class="text-sm text-error mb-4">{{ dashboardStore.error }}</p>
 

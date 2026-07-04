@@ -66,6 +66,34 @@ public sealed class JobPhotosIntegrationTests : IClassFixture<BackendIntegration
     }
 
     [Fact]
+    public async Task GetJobs_includes_photo_count_for_each_job()
+    {
+        var owner = await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
+            "VisionPaint Owner",
+            $"owner-{Guid.NewGuid():N}@example.com",
+            "Password123!"));
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var created = await _fixture.Client.PostAsJsonAsync("/api/jobs", new { title = "Counted job" });
+        created.EnsureSuccessStatusCode();
+        var job = await created.Content.ReadFromJsonAsync<Job>();
+
+        using var form = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(TinyPng);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        form.Add(fileContent, "file", "test.png");
+        form.Add(new StringContent("before"), "photoKind");
+
+        using var upload = await _fixture.Client.PostAsync($"/api/jobs/{job!.Id}/photos", form);
+        upload.EnsureSuccessStatusCode();
+
+        var jobs = await _fixture.Client.GetFromJsonAsync<List<JobListItemResponse>>("/api/jobs");
+        Assert.NotNull(jobs);
+        var listed = Assert.Single(jobs!, item => item.Id == job.Id);
+        Assert.Equal(1, listed.PhotoCount);
+    }
+
+    [Fact]
     public async Task LocalFiles_rejects_paths_outside_photo_root()
     {
         var escapedFileName = $"visionpaint-escape-{Guid.NewGuid():N}.txt";

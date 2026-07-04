@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { request, resolveAssetUrl, uploadForm } from "@/lib/api";
+import { useJobsStore } from "@/stores/jobs";
 import type { JobPhoto, PhotoKind } from "@/types/job";
 
 export const usePhotosStore = defineStore("photos", () => {
@@ -52,6 +53,7 @@ export const usePhotosStore = defineStore("photos", () => {
     const photo = normalizePhoto(raw);
     const current = byJobId.value[jobId] ?? [];
     byJobId.value[jobId] = [photo, ...current];
+    useJobsStore().incrementPhotoCount(jobId);
     return photo;
   }
 

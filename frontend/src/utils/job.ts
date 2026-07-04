@@ -63,3 +63,24 @@ export function mapsUrl(job: Job): string | null {
 export function formatMinutes(minutes: number): string {
   return (minutes / 60).toFixed(1);
 }
+
+export function matchesJobSearch(job: Job, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  const haystack = [
+    job.title,
+    job.addressLine1,
+    job.addressLine2,
+    job.city,
+    job.stateRegion,
+    job.postalCode,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalized);
+}

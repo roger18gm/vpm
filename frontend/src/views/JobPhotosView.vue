@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import PhotoLightbox from "@/components/photo/PhotoLightbox.vue";
-import type { Job, JobPhoto } from "@/types/job";
+import type { Job, JobPhoto, PhotoKind } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
 import { usePhotosStore } from "@/stores/photos";
 
@@ -14,8 +14,23 @@ const photos = ref(photosStore.list(props.id));
 const loading = ref(true);
 const lightboxOpen = ref(false);
 const lightboxIndex = ref(0);
+const kindFilter = ref<"all" | PhotoKind>("all");
 
-const viewablePhotos = computed(() => photos.value.filter((photo) => photo.url));
+const kindFilters = [
+  { id: "all" as const, label: "All" },
+  { id: "before" as const, label: "Before" },
+  { id: "after" as const, label: "After" },
+  { id: "progress" as const, label: "Progress" },
+];
+
+const filteredPhotos = computed(() => {
+  if (kindFilter.value === "all") {
+    return photos.value;
+  }
+  return photos.value.filter((photo) => photo.photoKind === kindFilter.value);
+});
+
+const viewablePhotos = computed(() => filteredPhotos.value.filter((photo) => photo.url));
 
 onMounted(async () => {
   try {
@@ -54,9 +69,22 @@ function closeLightbox() {
   <h1 class="text-xl font-bold mb-1">Photos</h1>
   <p class="text-sm text-muted mb-4">{{ job?.title ?? "…" }}</p>
 
+  <div v-if="!loading && photos.length" class="flex gap-2 flex-wrap mb-4">
+    <button
+      v-for="filter in kindFilters"
+      :key="filter.id"
+      type="button"
+      class="text-xs px-3 py-1.5 rounded-full border"
+      :class="kindFilter === filter.id ? 'bg-text text-white border-text' : 'bg-surface border-border'"
+      @click="kindFilter = filter.id"
+    >
+      {{ filter.label }}
+    </button>
+  </div>
+
   <p v-if="loading" class="text-sm text-muted mb-20">Loading…</p>
-  <ul v-else-if="photos.length" class="space-y-4 mb-20">
-    <li v-for="photo in photos" :key="photo.id" class="flex gap-3 bg-surface border border-border rounded-lg p-3">
+  <ul v-else-if="filteredPhotos.length" class="space-y-4 mb-20">
+    <li v-for="photo in filteredPhotos" :key="photo.id" class="flex gap-3 bg-surface border border-border rounded-lg p-3">
       <button
         v-if="photo.url"
         type="button"
@@ -83,6 +111,7 @@ function closeLightbox() {
       </div>
     </li>
   </ul>
+  <p v-else-if="photos.length && kindFilter !== 'all'" class="text-sm text-muted mb-20">No {{ kindLabel(kindFilter) }} photos yet.</p>
   <p v-else class="text-sm text-muted mb-20">No photos yet.</p>
 
   <PhotoLightbox
