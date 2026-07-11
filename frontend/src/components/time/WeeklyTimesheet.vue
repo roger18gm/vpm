@@ -96,6 +96,7 @@ async function handleSaved(payload: {
   clockInAt: string;
   clockOutAt: string;
   breakMinutes: number;
+  breaks: { breakStartAt: string; breakEndAt: string; breakType: "lunch" | "rest" | "other" }[];
   notes: string | null;
 }) {
   formBusy.value = true;

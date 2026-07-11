@@ -86,14 +86,21 @@ public sealed record CreateTimeEntryRequest(
     DateTimeOffset ClockOutAt,
     int? PersonId,
     int BreakMinutes = 0,
-    string? Notes = null);
+    string? Notes = null,
+    IReadOnlyList<TimeBreakInputDto>? Breaks = null);
 
 public sealed record UpdateTimeEntryRequest(
     int JobId,
     DateTimeOffset ClockInAt,
     DateTimeOffset ClockOutAt,
     int BreakMinutes = 0,
-    string? Notes = null);
+    string? Notes = null,
+    IReadOnlyList<TimeBreakInputDto>? Breaks = null);
+
+public sealed record TimeBreakInputDto(
+    DateTimeOffset BreakStartAt,
+    DateTimeOffset BreakEndAt,
+    string BreakType);
 
 public sealed record TimeBreakWindowDto(
     int Id,

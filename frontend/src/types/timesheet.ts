@@ -43,11 +43,18 @@ export type PersonSummary = {
   companyRole: string;
 };
 
+export type TimeBreakInput = {
+  breakStartAt: string;
+  breakEndAt: string;
+  breakType: "lunch" | "rest" | "other";
+};
+
 export type TimeEntryInput = {
   jobId: number;
   clockInAt: string;
   clockOutAt: string;
   breakMinutes: number;
+  breaks: TimeBreakInput[];
   notes?: string | null;
   personId?: number | null;
 };

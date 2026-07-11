@@ -467,10 +467,24 @@ public sealed class TimeEntryService
             return (null, tzError, 404);
         }
 
+        var breakMinutes = request.BreakMinutes;
+        if (request.Breaks is not null)
+        {
+            var breakError = ValidateBreakWindows(
+                request.ClockInAt,
+                request.ClockOutAt,
+                request.Breaks,
+                out breakMinutes);
+            if (breakError is not null)
+            {
+                return (null, breakError, 400);
+            }
+        }
+
         var validationError = ValidateClosedEntryTimes(
             request.ClockInAt,
             request.ClockOutAt,
-            request.BreakMinutes,
+            breakMinutes,
             timeZone,
             user,
             null);
@@ -492,7 +506,7 @@ public sealed class TimeEntryService
             PersonId = targetPersonId,
             ClockInAt = request.ClockInAt,
             ClockOutAt = request.ClockOutAt,
-            BreakMinutes = request.BreakMinutes,
+            BreakMinutes = breakMinutes,
             Notes = request.Notes,
             CreatedAt = now,
             UpdatedAt = now
@@ -500,6 +514,11 @@ public sealed class TimeEntryService
 
         _db.TimeEntries.Add(entry);
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (request.Breaks is not null)
+        {
+            await ReplaceBreakRowsAsync(entry.Id, request.Breaks, cancellationToken);
+        }
 
         return (await BuildSessionDtoAsync(entry, timeZone, cancellationToken), null, 201);
     }
@@ -533,10 +552,24 @@ public sealed class TimeEntryService
             return (null, "End your shift on the Clock tab before editing this entry.", 403);
         }
 
+        var breakMinutes = request.BreakMinutes;
+        if (request.Breaks is not null)
+        {
+            var breakError = ValidateBreakWindows(
+                request.ClockInAt,
+                request.ClockOutAt,
+                request.Breaks,
+                out breakMinutes);
+            if (breakError is not null)
+            {
+                return (null, breakError, 400);
+            }
+        }
+
         var validationError = ValidateClosedEntryTimes(
             request.ClockInAt,
             request.ClockOutAt,
-            request.BreakMinutes,
+            breakMinutes,
             timeZone,
             user,
             entry);
@@ -551,12 +584,19 @@ public sealed class TimeEntryService
             return (null, jobError, jobError == "Job not found." ? 404 : 403);
         }
 
-        await ClearBreakRowsAsync(entry.Id, cancellationToken);
+        if (request.Breaks is not null)
+        {
+            await ReplaceBreakRowsAsync(entry.Id, request.Breaks, cancellationToken);
+        }
+        else
+        {
+            await ClearBreakRowsAsync(entry.Id, cancellationToken);
+        }
 
         entry.JobId = request.JobId;
         entry.ClockInAt = request.ClockInAt;
         entry.ClockOutAt = request.ClockOutAt;
-        entry.BreakMinutes = request.BreakMinutes;
+        entry.BreakMinutes = breakMinutes;
         entry.Notes = request.Notes;
         entry.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -743,6 +783,73 @@ public sealed class TimeEntryService
         }
 
         return null;
+    }
+
+    private static readonly HashSet<string> ValidBreakTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "lunch", "rest", "other"
+    };
+
+    private string? ValidateBreakWindows(
+        DateTimeOffset clockInAt,
+        DateTimeOffset clockOutAt,
+        IReadOnlyList<TimeBreakInputDto> breaks,
+        out int totalBreakMinutes)
+    {
+        totalBreakMinutes = 0;
+        var ordered = breaks.OrderBy(b => b.BreakStartAt).ToList();
+        DateTimeOffset? previousEnd = null;
+
+        foreach (var b in ordered)
+        {
+            if (!ValidBreakTypes.Contains(b.BreakType))
+            {
+                return "Break type must be lunch, rest, or other.";
+            }
+
+            if (b.BreakEndAt <= b.BreakStartAt)
+            {
+                return "Break end must be after break start.";
+            }
+
+            if (b.BreakStartAt < clockInAt || b.BreakEndAt > clockOutAt)
+            {
+                return "Breaks must fall within the shift.";
+            }
+
+            if (previousEnd is not null && b.BreakStartAt < previousEnd)
+            {
+                return "Breaks cannot overlap.";
+            }
+
+            previousEnd = b.BreakEndAt;
+            totalBreakMinutes += (int)Math.Max(0, (b.BreakEndAt - b.BreakStartAt).TotalMinutes);
+        }
+
+        return null;
+    }
+
+    private async Task ReplaceBreakRowsAsync(
+        int timeEntryId,
+        IReadOnlyList<TimeBreakInputDto> breaks,
+        CancellationToken cancellationToken)
+    {
+        await ClearBreakRowsAsync(timeEntryId, cancellationToken);
+        foreach (var b in breaks)
+        {
+            _db.TimeBreaks.Add(new TimeBreak
+            {
+                TimeEntryId = timeEntryId,
+                BreakStartAt = b.BreakStartAt,
+                BreakEndAt = b.BreakEndAt,
+                BreakType = b.BreakType.ToLowerInvariant()
+            });
+        }
+
+        if (breaks.Count > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task ClearBreakRowsAsync(int timeEntryId, CancellationToken cancellationToken)

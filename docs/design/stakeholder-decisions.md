@@ -10,6 +10,7 @@ Recorded outcomes from stakeholder review. Implementation and UX should follow t
 | Q4 | **Before, after, and progress photos** | `photo_kind`: `before` \| `after` \| `progress`. All allowed on any active job. |
 | Q5 | **Only `owner`, `admin`, `manager` change job status** | Crew read-only on status; managers use dropdown on SCR-007 / edit. |
 | Q6 | **Crew sees assigned jobs only** | `GET /api/jobs` filtered by `job_assignment` for `crew`; managers see company scope. |
+| Q7 | **Manual time corrections edit break windows** | Add/Edit time on This week uses start/end/type rows (not minutes-only). Persists `time_break`; `break_minutes` is the sum. See [2026-07-11-full-break-editor-design.md](../superpowers/specs/2026-07-11-full-break-editor-design.md). |
 
 ## Navigation confirmed
 

@@ -324,4 +324,182 @@ public sealed class TimeEntryMutationIntegrationTests : IClassFixture<BackendInt
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CreateEntry_with_breaks_persists_windows_and_sums_minutes()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, _) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+        var lunchStart = clockIn.AddHours(1);
+        var lunchEnd = lunchStart.AddMinutes(30);
+        var restStart = clockIn.AddHours(2);
+        var restEnd = restStart.AddMinutes(10);
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var response = await _fixture.Client.PostAsJsonAsync("/api/time/entries", new CreateTimeEntryRequest(
+            jobId,
+            clockIn,
+            clockOut,
+            null,
+            BreakMinutes: 0,
+            Notes: null,
+            Breaks: new[]
+            {
+                new TimeBreakInputDto(lunchStart, lunchEnd, "lunch"),
+                new TimeBreakInputDto(restStart, restEnd, "rest"),
+            }));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<WeeklyTimesheetSessionDto>();
+        Assert.NotNull(session);
+        Assert.Equal(40, session!.BreakMinutes);
+        Assert.Equal(200, session.WorkMinutes);
+        Assert.Equal(2, session.Breaks.Count);
+        Assert.Contains(session.Breaks, b => b.BreakType == "lunch" && b.Minutes == 30);
+        Assert.Contains(session.Breaks, b => b.BreakType == "rest" && b.Minutes == 10);
+    }
+
+    [Fact]
+    public async Task UpdateEntry_with_breaks_replaces_windows()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>()
+                .UseNpgsql(_fixture.Database.ConnectionString)
+                .Options);
+
+        var entry = new TimeEntry
+        {
+            JobId = jobId,
+            PersonId = personId,
+            ClockInAt = clockIn,
+            ClockOutAt = clockOut,
+            BreakMinutes = 15,
+            CreatedAt = clockIn,
+            UpdatedAt = clockOut
+        };
+        db.TimeEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        db.TimeBreaks.Add(new TimeBreak
+        {
+            TimeEntryId = entry.Id,
+            BreakStartAt = clockIn.AddMinutes(30),
+            BreakEndAt = clockIn.AddMinutes(45),
+            BreakType = "rest"
+        });
+        await db.SaveChangesAsync();
+        var oldBreakId = await db.TimeBreaks.Where(b => b.TimeEntryId == entry.Id).Select(b => b.Id).SingleAsync();
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var lunchStart = clockIn.AddHours(1);
+        var lunchEnd = lunchStart.AddMinutes(20);
+        using var response = await _fixture.Client.PutAsJsonAsync(
+            $"/api/time/entries/{entry.Id}",
+            new UpdateTimeEntryRequest(
+                jobId,
+                clockIn,
+                clockOut,
+                BreakMinutes: 99,
+                Notes: null,
+                Breaks: new[] { new TimeBreakInputDto(lunchStart, lunchEnd, "lunch") }));
+
+        response.EnsureSuccessStatusCode();
+        var session = await response.Content.ReadFromJsonAsync<WeeklyTimesheetSessionDto>();
+        Assert.Equal(20, session!.BreakMinutes);
+        Assert.Single(session.Breaks);
+        Assert.Equal("lunch", session.Breaks[0].BreakType);
+        Assert.DoesNotContain(session.Breaks, b => b.Id == oldBreakId);
+    }
+
+    [Fact]
+    public async Task CreateEntry_overlapping_breaks_returns_400()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, _) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var response = await _fixture.Client.PostAsJsonAsync("/api/time/entries", new CreateTimeEntryRequest(
+            jobId,
+            clockIn,
+            clockOut,
+            null,
+            Breaks: new[]
+            {
+                new TimeBreakInputDto(clockIn.AddMinutes(30), clockIn.AddMinutes(60), "lunch"),
+                new TimeBreakInputDto(clockIn.AddMinutes(45), clockIn.AddMinutes(75), "rest"),
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateEntry_break_outside_shift_returns_400()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, _) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var response = await _fixture.Client.PostAsJsonAsync("/api/time/entries", new CreateTimeEntryRequest(
+            jobId,
+            clockIn,
+            clockOut,
+            null,
+            Breaks: new[]
+            {
+                new TimeBreakInputDto(clockIn.AddHours(-1), clockIn.AddMinutes(30), "lunch"),
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateEntry_break_end_before_start_returns_400()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, _) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var response = await _fixture.Client.PostAsJsonAsync("/api/time/entries", new CreateTimeEntryRequest(
+            jobId,
+            clockIn,
+            clockOut,
+            null,
+            Breaks: new[]
+            {
+                new TimeBreakInputDto(clockIn.AddHours(1), clockIn.AddMinutes(30), "lunch"),
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateEntry_empty_breaks_array_clears_break_minutes()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, _) = await SeedJobAsync(_fixture, owner);
+        var (clockIn, clockOut) = CurrentWeekRange();
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var response = await _fixture.Client.PostAsJsonAsync("/api/time/entries", new CreateTimeEntryRequest(
+            jobId,
+            clockIn,
+            clockOut,
+            null,
+            BreakMinutes: 30,
+            Notes: null,
+            Breaks: Array.Empty<TimeBreakInputDto>()));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var session = await response.Content.ReadFromJsonAsync<WeeklyTimesheetSessionDto>();
+        Assert.Equal(0, session!.BreakMinutes);
+        Assert.Empty(session.Breaks);
+    }
 }

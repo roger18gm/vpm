@@ -270,8 +270,9 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 - Seven expandable day rows (Sun–Sat): work hours + break hours collapsed; expanded shows job sessions and break windows.
 - Managers+: person picker (`GET /api/people`) to view any worker’s timesheet.
 - Crew: own timesheet only.
+- **Add/Edit time modal:** job, date, clock in/out, optional notes, and a **break list** (start, end, type: lunch/rest/other) with add/remove — no standalone break-minutes field. Always posts `breaks[]` to `POST/PUT /api/time/entries`.
 
-**API:** `GET /api/time/active`, `POST /api/time/clock-in`, `POST /api/time/clock-out`, `POST /api/time/break/start`, `POST /api/time/break/end`, `GET /api/time/weekly`.
+**API:** `GET /api/time/active`, `POST /api/time/clock-in`, `POST /api/time/clock-out`, `POST /api/time/break/start`, `POST /api/time/break/end`, `GET /api/time/weekly`, `POST/PUT/DELETE /api/time/entries`.
 
 ---
 

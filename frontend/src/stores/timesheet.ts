@@ -80,6 +80,7 @@ export const useTimesheetStore = defineStore("timesheet", () => {
         clockInAt: input.clockInAt,
         clockOutAt: input.clockOutAt,
         breakMinutes: input.breakMinutes,
+        breaks: input.breaks,
         notes: input.notes ?? null,
         personId: input.personId ?? null,
       }),
@@ -95,6 +96,7 @@ export const useTimesheetStore = defineStore("timesheet", () => {
         clockInAt: input.clockInAt,
         clockOutAt: input.clockOutAt,
         breakMinutes: input.breakMinutes,
+        breaks: input.breaks,
         notes: input.notes ?? null,
       }),
     });
