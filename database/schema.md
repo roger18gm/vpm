@@ -44,6 +44,17 @@ Fields:
 - `created_at`
 - `updated_at`
 
+### `password_reset_token`
+One-time hashed tokens for forgot-password email links.
+
+Fields:
+- `id`
+- `auth_user_id`
+- `token_hash`
+- `expires_at`
+- `used_at`
+- `created_at`
+
 ### `company_member`
 Links people to companies and stores their access role.
 

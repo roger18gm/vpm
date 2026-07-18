@@ -28,6 +28,8 @@ Authorization rules: [auth design](../superpowers/specs/2026-05-07-auth-design.m
 | ID      | Screen                     | Route                  | Roles                 | Priority | API (current / planned)                       |
 | ------- | -------------------------- | ---------------------- | --------------------- | -------- | --------------------------------------------- |
 | SCR-001 | Sign in                    | `/login`               | all (guest)           | P0       | `POST /api/auth/login`                        |
+| SCR-001a| Forgot password            | `/forgot-password`     | guest                 | P1       | `POST /api/auth/forgot-password`              |
+| SCR-001b| Reset password             | `/reset-password`      | guest                 | P1       | `POST /api/auth/reset-password`               |
 | SCR-002 | First-time bootstrap       | `/login?bootstrap=1`   | guest (once)          | P0       | `POST /api/auth/bootstrap`                    |
 | SCR-003 | Manager dashboard          | `/dashboard`           | owner, admin, manager | P0       | jobs aggregate, hours (planned)               |
 | SCR-004 | Jobs list (all company)    | `/jobs`                | owner, admin, manager | P0       | `GET /api/jobs`                               |

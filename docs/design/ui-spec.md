@@ -146,9 +146,24 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 | **Layout** | Centered card on `color-bg`, max-width 400px |
 
 **Fields:** email, password; bootstrap adds name.  
-**Actions:** Sign in (primary), toggle bootstrap if `canBootstrap`.  
-**States:** loading session, error message inline, success redirects to role home (`/dashboard` or `/jobs`).  
+**Actions:** Sign in (primary), toggle bootstrap if `canBootstrap`, **Forgot password?** → `/forgot-password`.  
+**States:** loading session, error message inline, success redirects to role home (`/dashboard` or `/jobs`); `?reset=1` shows “Password updated…” banner.  
 **API:** `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/bootstrap`.
+
+### SCR-001a — Forgot password
+
+**Route:** `/forgot-password`  
+**Roles:** Guest  
+**Fields:** email.  
+**Behavior:** Always show generic confirmation after submit (no email enumeration).  
+**API:** `POST /api/auth/forgot-password`.
+
+### SCR-001b — Reset password
+
+**Route:** `/reset-password?token=…`  
+**Roles:** Guest  
+**Fields:** new password, confirm (min 8).  
+**API:** `POST /api/auth/reset-password`. On success → `/login?reset=1`.
 
 ---
 

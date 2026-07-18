@@ -34,12 +34,18 @@ The API uses **Bearer JWT** (not cookies). Suited for the Firebase SPA and futur
 |---------|-------------|
 | `VISIONPAINT_JWT_SIGNING_KEY` | Required in Azure (min 32 characters). Generate a random secret; never commit it. |
 | `Jwt:Issuer` / `Jwt:Audience` | Optional; default `VisionPaint` |
+| `VISIONPAINT_BREVO_API_KEY` or `Brevo:ApiKey` | Brevo transactional API key for password-reset emails |
+| `Brevo:SenderEmail` / `Brevo:SenderName` | Verified sender in the Brevo dashboard |
+| `App:FrontendBaseUrl` | SPA origin used in reset links (e.g. `http://localhost:5173` or Firebase URL) |
+| `Auth:PasswordResetTokenHours` | Reset link lifetime (default `1`) |
 
 Endpoints:
 
 - `POST /api/auth/login` -> `{ accessToken, refreshToken, accessTokenExpiresAt, user }`
 - `POST /api/auth/refresh` -> new token pair, rotating the refresh token
 - `POST /api/auth/logout` -> revokes the active refresh-token session and the client discards tokens
+- `POST /api/auth/forgot-password` -> `{ email }` (always generic success)
+- `POST /api/auth/reset-password` -> `{ token, newPassword }`
 
 Local dev sets `VISIONPAINT_JWT_SIGNING_KEY` in `Properties/launchSettings.json`.
 

@@ -41,6 +41,18 @@ create table if not exists refresh_token (
 create index if not exists refresh_token_auth_user_id_idx on refresh_token (auth_user_id);
 create index if not exists refresh_token_session_id_idx on refresh_token (session_id);
 
+create table if not exists password_reset_token (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null references auth_user (id) on delete cascade,
+  token_hash text not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists password_reset_token_token_hash_uidx on password_reset_token (token_hash);
+create index if not exists password_reset_token_auth_user_id_idx on password_reset_token (auth_user_id);
+
 create table if not exists company_member (
   company_id integer not null references company (id) on delete cascade,
   person_id integer not null references person (id) on delete cascade,

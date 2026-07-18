@@ -80,6 +80,8 @@ Use snake_case and singular wording.
 
 Official dotnet skills: https://github.com/dotnet/skills
 
+Brevo API docs https://developers.brevo.com/docs/getting-started
+
 ## 7. Frontend Practices - vuejs
 
 Before building or changing UI screens, read `docs/design/ui-spec.md`, `docs/design/stakeholder-decisions.md`, and `docs/design/components.md`.
