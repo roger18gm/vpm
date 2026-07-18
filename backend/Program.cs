@@ -46,6 +46,13 @@ builder.Services.AddScoped<IJobAccessService, JobAccessService>();
 builder.Services.AddScoped<TimeEntryService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<IPasswordHasher<AuthUser>, PasswordHasher<AuthUser>>();
+builder.Services.AddScoped<PasswordResetService>();
+
+builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection(BrevoOptions.SectionName));
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
+builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+builder.Services.AddHttpClient("Brevo");
+builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
 
 if (isCiTestEnvironment || builder.Environment.IsDevelopment())
 {

@@ -29,3 +29,10 @@ public sealed record BootstrapRequest(
 
 public sealed record RefreshTokenRequest(
     [Required] string RefreshToken);
+
+public sealed record ForgotPasswordRequest(
+    [Required, EmailAddress] string Email);
+
+public sealed record ResetPasswordRequest(
+    [Required] string Token,
+    [Required, MinLength(8)] string NewPassword);

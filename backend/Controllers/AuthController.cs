@@ -18,17 +18,20 @@ public sealed class AuthController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly IPasswordHasher<AuthUser> _passwordHasher;
     private readonly ITokenService _tokenService;
+    private readonly PasswordResetService _passwordReset;
 
     public AuthController(
         AppDbContext db,
         ICurrentUserService currentUserService,
         IPasswordHasher<AuthUser> passwordHasher,
-        ITokenService tokenService)
+        ITokenService tokenService,
+        PasswordResetService passwordReset)
     {
         _db = db;
         _currentUserService = currentUserService;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
+        _passwordReset = passwordReset;
     }
 
     [HttpGet("status")]
@@ -81,6 +84,34 @@ public sealed class AuthController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(await CreateTokenResponseAsync(currentUser, Guid.NewGuid(), cancellationToken));
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _passwordReset.ForgotPasswordAsync(request.Email, cancellationToken);
+        return Ok(new { message = "If an account exists for that email, we sent reset instructions." });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var (ok, error) = await _passwordReset.ResetPasswordAsync(
+            request.Token,
+            request.NewPassword,
+            cancellationToken);
+        if (!ok)
+        {
+            return BadRequest(new { message = error });
+        }
+
+        return Ok(new { message = "Password updated. You can sign in." });
     }
 
     [HttpPost("refresh")]

@@ -14,6 +14,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
     public DbSet<Company> Companies => Set<Company>();
 
     public DbSet<Person> People => Set<Person>();
@@ -65,6 +67,19 @@ public sealed class AppDbContext : DbContext
             entity.Property(token => token.RevokeReason).HasColumnName("revoke_reason");
             entity.Property(token => token.ReplacedByTokenId).HasColumnName("replaced_by_token_id");
             entity.HasIndex(token => token.TokenId).IsUnique();
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("password_reset_token");
+            entity.HasKey(token => token.Id);
+            entity.Property(token => token.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(token => token.AuthUserId).HasColumnName("auth_user_id");
+            entity.Property(token => token.TokenHash).HasColumnName("token_hash");
+            entity.Property(token => token.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(token => token.UsedAt).HasColumnName("used_at");
+            entity.Property(token => token.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(token => token.TokenHash).IsUnique();
         });
 
         modelBuilder.Entity<Company>(entity =>
