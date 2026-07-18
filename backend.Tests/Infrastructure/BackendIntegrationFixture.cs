@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace VisionPaint.Tests.Infrastructure;
@@ -12,6 +13,8 @@ public sealed class BackendIntegrationFixture : IAsyncLifetime
     public TestWebApplicationFactory Factory { get; private set; } = null!;
 
     public TestAuthClient AuthClient { get; private set; } = null!;
+
+    public RecordingEmailSender EmailSender { get; private set; } = null!;
 
     public HttpClient Client => _client ?? throw new InvalidOperationException("Test client has not been initialized.");
 
@@ -27,6 +30,7 @@ public sealed class BackendIntegrationFixture : IAsyncLifetime
             HandleCookies = true
         });
         AuthClient = new TestAuthClient(_client);
+        EmailSender = Factory.Services.GetRequiredService<RecordingEmailSender>();
     }
 
     public async Task DisposeAsync()
