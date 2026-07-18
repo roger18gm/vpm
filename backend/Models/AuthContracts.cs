@@ -36,3 +36,7 @@ public sealed record ForgotPasswordRequest(
 public sealed record ResetPasswordRequest(
     [Required] string Token,
     [Required, MinLength(8)] string NewPassword);
+
+public sealed record ChangePasswordRequest(
+    [Required] string CurrentPassword,
+    [Required, MinLength(8)] string NewPassword);

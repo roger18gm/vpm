@@ -170,6 +170,60 @@ public sealed class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var authUserIdText = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var sessionIdText = User.FindFirstValue(TokenService.SessionIdClaimType);
+        if (!Guid.TryParse(authUserIdText, out var authUserId)
+            || !Guid.TryParse(sessionIdText, out var sessionId))
+        {
+            return Unauthorized();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+        {
+            return BadRequest(new { message = "Password must be at least 8 characters." });
+        }
+
+        var authUser = await _db.AuthUsers.FirstOrDefaultAsync(
+            user => user.Id == authUserId && user.IsActive,
+            cancellationToken);
+        if (authUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var verification = _passwordHasher.VerifyHashedPassword(
+            authUser,
+            authUser.PasswordHash,
+            request.CurrentPassword);
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            return BadRequest(new { message = "Current password is incorrect." });
+        }
+
+        if (request.CurrentPassword == request.NewPassword)
+        {
+            return BadRequest(new { message = "New password must be different from the current password." });
+        }
+
+        authUser.PasswordHash = _passwordHasher.HashPassword(authUser, request.NewPassword);
+        authUser.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        await RevokeOtherRefreshTokenSessionsAsync(
+            authUserId,
+            sessionId,
+            "password_change",
+            cancellationToken);
+
+        return Ok(new { message = "Password updated." });
+    }
+
     [HttpPost("bootstrap")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthTokenResponse>> Bootstrap([FromBody] BootstrapRequest request, CancellationToken cancellationToken)
@@ -342,6 +396,34 @@ public sealed class AuthController : ControllerBase
     {
         var tokens = await _db.RefreshTokens
             .Where(token => token.AuthUserId == authUserId && token.SessionId == sessionId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        if (tokens.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var token in tokens)
+        {
+            token.RevokedAt = now;
+            token.RevokeReason = reason;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task RevokeOtherRefreshTokenSessionsAsync(
+        Guid authUserId,
+        Guid keepSessionId,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var tokens = await _db.RefreshTokens
+            .Where(token =>
+                token.AuthUserId == authUserId
+                && token.SessionId != keepSessionId
+                && token.RevokedAt == null)
             .ToListAsync(cancellationToken);
 
         if (tokens.Count == 0)
