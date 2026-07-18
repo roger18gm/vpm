@@ -205,6 +205,20 @@ export const useAuthStore = defineStore("auth", () => {
     return data.user;
   }
 
+  async function forgotPassword(email: string) {
+    await request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }, false);
+  }
+
+  async function resetPassword(token: string, newPassword: string) {
+    await request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    }, false);
+  }
+
   async function logout() {
     try {
       if (getAccessToken()) {
@@ -228,6 +242,8 @@ export const useAuthStore = defineStore("auth", () => {
     initialize,
     login,
     bootstrap,
+    forgotPassword,
+    resetPassword,
     logout,
     refreshSession,
   };

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import VpAlert from "@/components/ui/VpAlert.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpInput from "@/components/ui/VpInput.vue";
@@ -17,6 +17,12 @@ const password = ref("");
 const busy = ref(false);
 const message = ref<string | null>(null);
 const error = ref<string | null>(null);
+
+onMounted(() => {
+  if (route.query.reset === "1") {
+    message.value = "Password updated. Sign in with your new password.";
+  }
+});
 
 async function onSubmit() {
   busy.value = true;
@@ -53,6 +59,14 @@ async function onSubmit() {
       <VpInput v-model="password" label="Password" type="password" required show-password-toggle />
       <VpButton type="submit" block :disabled="busy">{{ busy ? "Working…" : mode === "bootstrap" ? "Create account" : "Sign in" }}</VpButton>
     </form>
+
+    <RouterLink
+      v-if="mode === 'login'"
+      to="/forgot-password"
+      class="mt-3 text-sm text-primary inline-block"
+    >
+      Forgot password?
+    </RouterLink>
 
     <button
       v-if="auth.canBootstrap"
