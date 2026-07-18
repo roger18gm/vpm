@@ -308,8 +308,10 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 **Route:** `/account`  
 **Roles:** authenticated
 
-Show: name, email, company role. **Sign out** button.  
-**API:** `GET /api/auth/status`, `POST /api/auth/logout`.
+Show: name, email, company role.  
+**Change password:** button opens modal (current / new / confirm) → `POST /api/auth/change-password`. On success close modal and show short confirmation on Account; other refresh sessions are revoked; current session remains.  
+**Sign out** button.  
+**API:** `GET /api/auth/status`, `POST /api/auth/change-password`, `POST /api/auth/logout`.
 
 ---
 

@@ -219,6 +219,13 @@ export const useAuthStore = defineStore("auth", () => {
     }, false);
   }
 
+  async function changePassword(currentPassword: string, newPassword: string) {
+    await request<{ message: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   async function logout() {
     try {
       if (getAccessToken()) {
@@ -244,6 +251,7 @@ export const useAuthStore = defineStore("auth", () => {
     bootstrap,
     forgotPassword,
     resetPassword,
+    changePassword,
     logout,
     refreshSession,
   };
