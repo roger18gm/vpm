@@ -42,8 +42,7 @@ public static class TestDatabaseInitializer
 
     private static async Task ExecuteMigrationScriptsAsync(string connectionString, CancellationToken cancellationToken)
     {
-        var migrationDirectory = Path.GetFullPath(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "database", "migrations"));
+        var migrationDirectory = FindMigrationDirectory();
 
         foreach (var migrationPath in Directory.GetFiles(migrationDirectory, "*.sql").OrderBy(path => path))
         {
@@ -54,5 +53,22 @@ public static class TestDatabaseInitializer
             command.CommandText = await File.ReadAllTextAsync(migrationPath, cancellationToken);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+    }
+
+    private static string FindMigrationDirectory()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var migrationDirectory = Path.Combine(directory.FullName, "database", "migrations");
+            if (Directory.Exists(migrationDirectory))
+            {
+                return migrationDirectory;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not find database/migrations from the test output directory.");
     }
 }
