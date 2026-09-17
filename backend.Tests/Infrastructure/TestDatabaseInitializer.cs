@@ -20,6 +20,7 @@ public static class TestDatabaseInitializer
                           public.time_break,
                           public.time_entry,
                           public.job_photo,
+                          public.job_area,
                           public.job_assignment,
                           public.job_status_history,
                           public.job,

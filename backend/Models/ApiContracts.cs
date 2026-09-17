@@ -191,3 +191,16 @@ public sealed record CreateUserRequest(
     string CompanyRole);
 
 public sealed record UpdateUserRoleRequest(string CompanyRole);
+
+public sealed record JobAreaDto(
+    int Id,
+    int JobId,
+    string Name,
+    string Status,
+    int SortOrder,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? CompletedAt);
+
+public sealed record CreateJobAreaRequest(string Name);
+
+public sealed record UpdateJobAreaRequest(string? Name, string? Status);

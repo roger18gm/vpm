@@ -46,6 +46,18 @@ export type JobInput = {
 
 export type PhotoKind = "before" | "after" | "progress";
 
+export type JobAreaStatus = "not_started" | "in_progress" | "completed" | "blocked";
+
+export type JobArea = {
+  id: number;
+  jobId: number;
+  name: string;
+  status: JobAreaStatus;
+  sortOrder: number;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
 export type JobAssignment = {
   personId: number;
   name: string;

@@ -12,6 +12,10 @@ const classes = computed(() => {
       return "bg-green-100 text-green-800";
     case "cancelled":
       return "bg-red-100 text-primary";
+    case "blocked":
+      return "bg-red-100 text-primary";
+    case "not_started":
+      return "bg-gray-100 text-gray-700";
     default:
       return "bg-gray-100 text-gray-700";
   }

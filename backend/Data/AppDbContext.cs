@@ -34,6 +34,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<JobPhoto> JobPhotos => Set<JobPhoto>();
 
+    public DbSet<JobArea> JobAreas => Set<JobArea>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -215,6 +217,21 @@ public sealed class AppDbContext : DbContext
             entity.Property(photo => photo.Caption).HasColumnName("caption");
             entity.Property(photo => photo.TakenAt).HasColumnName("taken_at");
             entity.Property(photo => photo.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<JobArea>(entity =>
+        {
+            entity.ToTable("job_area");
+            entity.HasKey(area => area.Id);
+            entity.Property(area => area.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(area => area.JobId).HasColumnName("job_id");
+            entity.Property(area => area.ParentJobAreaId).HasColumnName("parent_job_area_id");
+            entity.Property(area => area.Name).HasColumnName("name");
+            entity.Property(area => area.Status).HasColumnName("status").HasDefaultValue("not_started");
+            entity.Property(area => area.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
+            entity.Property(area => area.Notes).HasColumnName("notes");
+            entity.Property(area => area.StartedAt).HasColumnName("started_at");
+            entity.Property(area => area.CompletedAt).HasColumnName("completed_at");
         });
     }
 }

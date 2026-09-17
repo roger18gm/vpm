@@ -303,6 +303,18 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 
 ---
 
+### SCR-015 — Job areas
+
+**Route:** `/jobs/:id/areas`  
+**Roles:** assigned crew + manager+ (crew read-only)
+
+**List:** name, status chip (`Not started` / `In progress` / `Completed` / `Blocked`).  
+**Manager:** add name, change status, rename, delete with confirm.  
+**Job detail:** Areas card shows “N of M completed” and **View areas**.  
+**API:** `GET/POST /api/jobs/:id/areas`, `PATCH/DELETE /api/jobs/:id/areas/:areaId`.
+
+---
+
 ### SCR-013 — Account
 
 **Route:** `/account`  

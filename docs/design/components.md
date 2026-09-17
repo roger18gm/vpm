@@ -36,6 +36,7 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `JobForm` | `src/components/job/JobForm.vue` | SCR-006, SCR-008 |
 | `JobDetailHeader` | `src/components/job/JobDetailHeader.vue` | SCR-007 |
 | `JobCrewList` | `src/components/job/JobCrewList.vue` | SCR-007, SCR-009 |
+| `JobAreasCard` | `src/components/job/JobAreasCard.vue` | SCR-007 |
 | `JobTimeSummary` | `src/components/time/JobTimeSummary.vue` | SCR-007, J6 |
 | `ClockPanel` | `src/components/time/ClockPanel.vue` | SCR-010 |
 | `PhotoTimeline` | `src/components/photo/PhotoTimeline.vue` | SCR-011 |
@@ -56,6 +57,7 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `/jobs/:id/crew` | `src/views/JobCrewView.vue` | SCR-009 |
 | `/jobs/:id/photos` | `src/views/JobPhotosView.vue` | SCR-011 |
 | `/jobs/:id/photos/new` | `src/views/JobPhotoUploadView.vue` | SCR-012 |
+| `/jobs/:id/areas` | `src/views/JobAreasView.vue` | SCR-015 |
 | `/clock` | `src/views/ClockView.vue` | SCR-010 |
 | `/account` | `src/views/AccountView.vue` | SCR-013 |
 | `/forbidden` | `src/views/ForbiddenView.vue` | SCR-014 |
@@ -67,6 +69,7 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `useAuthStore` | `src/stores/auth.ts` | Session, user, role |
 | `useClockStore` | `src/stores/clock.ts` | Active `time_entry`, timer tick |
 | `useJobsStore` | `src/stores/jobs.ts` | Optional cache; prefer fetch per view for MVP |
+| `useJobAreasStore` | `src/stores/jobAreas.ts` | Areas list cache |
 
 ## Icons
 

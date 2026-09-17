@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from "vue-router";
 import StatusBadge from "@/components/job/StatusBadge.vue";
 import PriorityChip from "@/components/job/PriorityChip.vue";
 import JobCrewList from "@/components/job/JobCrewList.vue";
+import JobAreasCard from "@/components/job/JobAreasCard.vue";
 import JobStatusHistory from "@/components/job/JobStatusHistory.vue";
 import JobTimeSummary from "@/components/time/JobTimeSummary.vue";
 import VpCard from "@/components/ui/VpCard.vue";
@@ -159,6 +160,8 @@ async function archiveJob() {
         :show-assign-link="auth.isManager"
       />
     </VpCard>
+
+    <JobAreasCard :job-id="id" class="mb-3" />
 
     <VpCard v-if="job.description" class="mb-3">
       <template #title>Description</template>
