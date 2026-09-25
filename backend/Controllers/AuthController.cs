@@ -275,6 +275,7 @@ public sealed class AuthController : ControllerBase
         });
 
         await _db.SaveChangesAsync(cancellationToken);
+        await ChecklistSeed.EnsureDefaultAsync(_db, company.Id, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         var currentUser = new CurrentUserContext(authUser.Id, person.Id, company.Id, "owner", person.Name, authUser.Email);
