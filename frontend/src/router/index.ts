@@ -107,6 +107,18 @@ const router = createRouter({
           props: (route) => ({ id: Number(route.params.id) }),
         },
         {
+          path: "jobs/:id/checklist",
+          name: "job-checklist",
+          component: () => import("@/views/JobChecklistView.vue"),
+          props: (route) => ({ id: Number(route.params.id) }),
+        },
+        {
+          path: "checklists",
+          name: "checklists",
+          component: () => import("@/views/ChecklistsView.vue"),
+          meta: { managerOnly: true },
+        },
+        {
           path: "clock",
           name: "clock",
           component: () => import("@/views/ClockView.vue"),
