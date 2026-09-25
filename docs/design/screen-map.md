@@ -44,7 +44,8 @@ Authorization rules: [auth design](../superpowers/specs/2026-05-07-auth-design.m
 | SCR-013 | Account                    | `/account`             | all authenticated     | P1       | `GET /api/auth/status`                        |
 | SCR-014 | Access denied              | `/forbidden`           | all                   | P0       | —                                             |
 | SCR-015 | Job areas (rooms)          | `/jobs/:id/areas`      | assigned + managers   | P2       | `GET/POST/PATCH/DELETE /api/jobs/:id/areas`   |
-| SCR-016 | Checklists                 | `/jobs/:id/checklist`  | manager+              | P2       | `job_checklist_item` (schema only)            |
+| SCR-016 | Checklists                 | `/jobs/:id/checklist`  | assigned + managers   | P2       | `GET/POST /api/jobs/:id/checklist`, `PATCH /api/jobs/:id/checklist/items/:templateItemId` |
+| SCR-018 | Checklist templates        | `/checklists`          | owner, admin, manager | P2       | `/api/checklist-templates` |
 | SCR-017 | Users admin                | `/users`               | owner, admin          | P1       | `GET/POST/PATCH /api/users`                   |
 
 ---

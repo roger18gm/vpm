@@ -315,6 +315,27 @@ Managers add **Dashboard** as first tab on mobile, or use sidebar on desktop.
 
 ---
 
+### SCR-016 — Job checklist
+
+**Route:** `/jobs/:id/checklist`  
+**Roles:** assigned crew + manager+ (crew can change item status)
+
+**List:** template name, item title, Required label, status Pending / Done / Not applicable.  
+**Manager:** template dropdown and Apply. Replacing a different template asks for confirmation. Templates link goes to `/checklists`.  
+**Cancelled job:** list remains; apply and status controls are hidden.  
+**Job detail:** Checklist card shows “N of M done” and, when needed, “K not applicable”, plus **View checklist**.
+
+### SCR-018 — Checklist templates
+
+**Route:** `/checklists`  
+**Roles:** owner, admin, manager
+
+**List:** template name, Default label, items with Required.  
+**Manager:** add, rename, set default, delete template; add, rename, toggle Required, delete item.  
+Desktop sidebar includes Checklists. Mobile bottom nav does not.
+
+---
+
 ### SCR-013 — Account
 
 **Route:** `/account`  
