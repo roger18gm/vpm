@@ -118,6 +118,27 @@ public sealed class JobChecklistIntegrationTests : IClassFixture<BackendIntegrat
     }
 
     [Fact]
+    public async Task Creating_item_with_isRequired_false_persists()
+    {
+        await BootstrapOwnerAsync();
+        var template = await CreateTemplateAsync("Exterior");
+
+        using var created = await _fixture.Client.PostAsJsonAsync(
+            $"/api/checklist-templates/{template.Id}/items",
+            new CreateChecklistTemplateItemRequest("Optional wipe-down", false));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var createdItem = await created.Content.ReadFromJsonAsync<ChecklistTemplateItemDto>();
+        Assert.NotNull(createdItem);
+        Assert.False(createdItem!.IsRequired);
+
+        var templates = await _fixture.Client.GetFromJsonAsync<List<ChecklistTemplateDto>>("/api/checklist-templates");
+        var exterior = templates!.Single(row => row.Id == template.Id);
+        var fetched = Assert.Single(exterior.Items);
+        Assert.Equal("Optional wipe-down", fetched.Title);
+        Assert.False(fetched.IsRequired);
+    }
+
+    [Fact]
     public async Task Duplicate_item_title_returns_400()
     {
         await BootstrapOwnerAsync();

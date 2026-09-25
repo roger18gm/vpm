@@ -260,7 +260,8 @@ public sealed class AppDbContext : DbContext
             entity.Property(item => item.ChecklistTemplateId).HasColumnName("checklist_template_id");
             entity.Property(item => item.Title).HasColumnName("title");
             entity.Property(item => item.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
-            entity.Property(item => item.IsRequired).HasColumnName("is_required").HasDefaultValue(true);
+            // No HasDefaultValue(true): EF would treat false as unset and omit it from INSERT.
+            entity.Property(item => item.IsRequired).HasColumnName("is_required");
         });
 
         modelBuilder.Entity<JobChecklistItem>(entity =>
