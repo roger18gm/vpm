@@ -16,8 +16,8 @@ export default defineConfig({
   timeout: 60_000,
   forbidOnly: isCi,
   retries: 0,
-  workers: isCi ? 1 : undefined,
-  fullyParallel: !isCi,
+  workers: 1,
+  fullyParallel: false,
   globalSetup: "./tests/e2e/global-setup.ts",
   globalTeardown: "./tests/e2e/global-teardown.ts",
   expect: {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./app-test";
 
 test("bootstrap, create a job, archive it, and sign out", async ({ page }) => {
   const email = `owner-${Date.now()}@example.com`;

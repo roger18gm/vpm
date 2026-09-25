@@ -165,3 +165,35 @@ export async function prepareE2eDatabase() {
     await appClient.end();
   }
 }
+
+export async function resetE2eData() {
+  if (process.env.PLAYWRIGHT_SKIP_DB_SETUP === "true") {
+    return;
+  }
+
+  loadEnvFile(path.join(repoRoot, "backend.Tests", ".env"));
+
+  const client = new Client(toPgConfig(resolveDbConnection()));
+  await client.connect();
+  try {
+    await client.query(
+      `
+      truncate table public.refresh_token,
+                    public.password_reset_token,
+                    public.time_break,
+                    public.time_entry,
+                    public.job_photo,
+                    public.job_area,
+                    public.job_assignment,
+                    public.job_status_history,
+                    public.job,
+                    public.company_member,
+                    public.person,
+                    public.auth_user
+      restart identity cascade;
+      `
+    );
+  } finally {
+    await client.end();
+  }
+}

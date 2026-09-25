@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./app-test";
 
 test("manager adds a job area and sees progress on job detail", async ({ page }) => {
   const email = `owner-${Date.now()}@example.com`;
