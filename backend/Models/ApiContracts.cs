@@ -204,3 +204,42 @@ public sealed record JobAreaDto(
 public sealed record CreateJobAreaRequest(string Name);
 
 public sealed record UpdateJobAreaRequest(string? Name, string? Status);
+
+public sealed record ChecklistTemplateItemDto(
+    int Id,
+    string Title,
+    int SortOrder,
+    bool IsRequired);
+
+public sealed record ChecklistTemplateDto(
+    int Id,
+    string Name,
+    bool IsDefault,
+    IReadOnlyList<ChecklistTemplateItemDto> Items);
+
+public sealed record CreateChecklistTemplateRequest(string Name, bool IsDefault = false);
+
+public sealed record UpdateChecklistTemplateRequest(string? Name, bool? IsDefault);
+
+public sealed record CreateChecklistTemplateItemRequest(string Title, bool IsRequired = true);
+
+public sealed record UpdateChecklistTemplateItemRequest(string? Title, bool? IsRequired);
+
+public sealed record JobChecklistItemDto(
+    int TemplateItemId,
+    string Title,
+    int SortOrder,
+    bool IsRequired,
+    string Status,
+    int? CompletedByPersonId,
+    string? CompletedByName,
+    DateTimeOffset? CompletedAt);
+
+public sealed record JobChecklistDto(
+    int? TemplateId,
+    string? TemplateName,
+    IReadOnlyList<JobChecklistItemDto> Items);
+
+public sealed record ApplyJobChecklistRequest(int TemplateId);
+
+public sealed record UpdateJobChecklistItemRequest(string Status);
