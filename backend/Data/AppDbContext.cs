@@ -36,6 +36,12 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<JobArea> JobAreas => Set<JobArea>();
 
+    public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
+
+    public DbSet<ChecklistTemplateItem> ChecklistTemplateItems => Set<ChecklistTemplateItem>();
+
+    public DbSet<JobChecklistItem> JobChecklistItems => Set<JobChecklistItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -232,6 +238,42 @@ public sealed class AppDbContext : DbContext
             entity.Property(area => area.Notes).HasColumnName("notes");
             entity.Property(area => area.StartedAt).HasColumnName("started_at");
             entity.Property(area => area.CompletedAt).HasColumnName("completed_at");
+        });
+
+        modelBuilder.Entity<ChecklistTemplate>(entity =>
+        {
+            entity.ToTable("checklist_template");
+            entity.HasKey(template => template.Id);
+            entity.Property(template => template.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(template => template.CompanyId).HasColumnName("company_id");
+            entity.Property(template => template.Name).HasColumnName("name");
+            entity.Property(template => template.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+            entity.Property(template => template.CreatedAt).HasColumnName("created_at");
+            entity.Property(template => template.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<ChecklistTemplateItem>(entity =>
+        {
+            entity.ToTable("checklist_template_item");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(item => item.ChecklistTemplateId).HasColumnName("checklist_template_id");
+            entity.Property(item => item.Title).HasColumnName("title");
+            entity.Property(item => item.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
+            // No HasDefaultValue(true): EF would treat false as unset and omit it from INSERT.
+            entity.Property(item => item.IsRequired).HasColumnName("is_required");
+        });
+
+        modelBuilder.Entity<JobChecklistItem>(entity =>
+        {
+            entity.ToTable("job_checklist_item");
+            entity.HasKey(item => new { item.JobId, item.TemplateItemId });
+            entity.Property(item => item.JobId).HasColumnName("job_id");
+            entity.Property(item => item.TemplateItemId).HasColumnName("template_item_id");
+            entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue("pending");
+            entity.Property(item => item.CompletedByPersonId).HasColumnName("completed_by_person_id");
+            entity.Property(item => item.CompletedAt).HasColumnName("completed_at");
+            entity.Property(item => item.Notes).HasColumnName("notes");
         });
     }
 }

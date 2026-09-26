@@ -13,6 +13,9 @@ const links = computed(() => {
     { to: "/jobs", label: "Jobs", icon: "mdi:clipboard-list-outline" },
     { to: "/clock", label: "Clock", icon: "mdi:clock-outline" },
   ];
+  if (auth.isManager) {
+    base.splice(2, 0, { to: "/checklists", label: "Checklists", icon: "mdi:format-list-checks" });
+  }
   if (auth.isAdmin) {
     base.push({ to: "/users", label: "Users", icon: "mdi:account-group-outline" });
   }

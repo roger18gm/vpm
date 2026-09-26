@@ -37,6 +37,7 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `JobDetailHeader` | `src/components/job/JobDetailHeader.vue` | SCR-007 |
 | `JobCrewList` | `src/components/job/JobCrewList.vue` | SCR-007, SCR-009 |
 | `JobAreasCard` | `src/components/job/JobAreasCard.vue` | SCR-007 |
+| `JobChecklistCard` | `src/components/job/JobChecklistCard.vue` | SCR-007 |
 | `JobTimeSummary` | `src/components/time/JobTimeSummary.vue` | SCR-007, J6 |
 | `ClockPanel` | `src/components/time/ClockPanel.vue` | SCR-010 |
 | `PhotoTimeline` | `src/components/photo/PhotoTimeline.vue` | SCR-011 |
@@ -58,6 +59,8 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `/jobs/:id/photos` | `src/views/JobPhotosView.vue` | SCR-011 |
 | `/jobs/:id/photos/new` | `src/views/JobPhotoUploadView.vue` | SCR-012 |
 | `/jobs/:id/areas` | `src/views/JobAreasView.vue` | SCR-015 |
+| `/jobs/:id/checklist` | `src/views/JobChecklistView.vue` | SCR-016 |
+| `/checklists` | `src/views/ChecklistsView.vue` | SCR-018 |
 | `/clock` | `src/views/ClockView.vue` | SCR-010 |
 | `/account` | `src/views/AccountView.vue` | SCR-013 |
 | `/forbidden` | `src/views/ForbiddenView.vue` | SCR-014 |
@@ -70,6 +73,8 @@ Maps [ui-spec.md](./ui-spec.md) global components and screens to suggested Vue 3
 | `useClockStore` | `src/stores/clock.ts` | Active `time_entry`, timer tick |
 | `useJobsStore` | `src/stores/jobs.ts` | Optional cache; prefer fetch per view for MVP |
 | `useJobAreasStore` | `src/stores/jobAreas.ts` | Areas list cache |
+| `useChecklistTemplatesStore` | `src/stores/checklistTemplates.ts` | Company template cache |
+| `useJobChecklistStore` | `src/stores/jobChecklist.ts` | Job checklist cache |
 
 ## Icons
 
@@ -81,6 +86,7 @@ Use [@iconify/vue](https://iconify.design/) with **Material Design Icons** colle
 | Clock nav | `mdi:clock-outline` |
 | Account nav | `mdi:account-outline` |
 | Dashboard nav | `mdi:view-dashboard-outline` |
+| Checklists nav | `mdi:format-list-checks` |
 | Add job | `mdi:plus` |
 | Photo | `mdi:camera-outline` |
 | Overdue | `mdi:alert-circle-outline` |
