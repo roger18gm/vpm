@@ -16,7 +16,10 @@ Optional `.env`:
 
 ```
 VITE_API_URL=https://vision-paint-api.azurewebsites.net/api
+VITE_SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>
 ```
+
+`VITE_SENTRY_DSN` is the same public Sentry DSN used by the API. Vite reads it at build time. Leave it unset to disable frontend error reporting.
 
 ## Design
 
