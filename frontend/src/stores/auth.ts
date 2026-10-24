@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import posthog from "posthog-js";
 import { getAccessToken, request, setAccessToken, setRefreshHandler } from "@/lib/api";
+import { logPostHogInfo } from "@/lib/posthogLogs";
 import { useClockStore } from "@/stores/clock";
 import type { AuthStatus, AuthTokenResponse, AuthUser, StoredAuth } from "@/types/auth";
 import { AUTH_STORAGE_KEY, isAdminRole, isManagerRole } from "@/types/auth";
@@ -45,6 +47,27 @@ function normalizeAuthUser(raw: unknown): AuthUser {
   };
 }
 
+function identifyUser(user: AuthUser) {
+  if (!user.authUserId) {
+    return;
+  }
+
+  const personProperties: Record<string, string | number> = {
+    company_id: user.companyId,
+    company_role: user.companyRole,
+  };
+
+  if (user.personName) {
+    personProperties.name = user.personName;
+  }
+
+  if (user.email) {
+    personProperties.email = user.email;
+  }
+
+  posthog.identify(user.authUserId, personProperties);
+}
+
 function normalizeAuthTokenResponse(raw: unknown): AuthTokenResponse {
   const record = (raw ?? {}) as Record<string, unknown>;
   const user = normalizeAuthUser(record.user ?? record.User);
@@ -85,6 +108,9 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated.value = data.isAuthenticated;
     canBootstrap.value = data.canBootstrap;
     user.value = data.user ? normalizeAuthUser(data.user) : null;
+    if (data.isAuthenticated && user.value) {
+      identifyUser(user.value);
+    }
     if (!data.isAuthenticated) {
       setAccessToken(null);
       refreshToken.value = null;
@@ -98,6 +124,10 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated.value = true;
     canBootstrap.value = false;
     user.value = data.user;
+    identifyUser(data.user);
+    logPostHogInfo("auth_session_established", {
+      company_role: data.user.companyRole,
+    });
     saveStoredAuth({
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
@@ -232,6 +262,7 @@ export const useAuthStore = defineStore("auth", () => {
         await request<void>("/auth/logout", { method: "POST" });
       }
     } finally {
+      posthog.reset();
       clearSession();
     }
   }

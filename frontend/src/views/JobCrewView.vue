@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import { request } from "@/lib/api";
@@ -50,6 +51,9 @@ async function save() {
       body: JSON.stringify({ personIds: selectedIds.value, assignmentRole: "crew" }),
     });
     await jobsStore.fetchJobs();
+    capturePostHogEvent("crew_assignments_saved", {
+      assigned_crew_count: selectedIds.value.length,
+    });
     toast.push("Crew assignments saved");
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Unable to save assignments.";

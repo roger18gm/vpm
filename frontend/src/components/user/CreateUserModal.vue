@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { capturePostHogEvent } from "@/lib/posthog";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import VpInput from "@/components/ui/VpInput.vue";
@@ -61,6 +62,7 @@ async function submit() {
       password: password.value,
       companyRole: companyRole.value,
     });
+    capturePostHogEvent("user_created", { company_role: companyRole.value });
     emit("created");
     emit("close");
   } catch (err) {

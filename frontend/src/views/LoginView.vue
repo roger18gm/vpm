@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import VpAlert from "@/components/ui/VpAlert.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpInput from "@/components/ui/VpInput.vue";
@@ -31,8 +32,10 @@ async function onSubmit() {
   try {
     if (mode.value === "bootstrap") {
       await auth.bootstrap(name.value, email.value, password.value);
+      capturePostHogEvent("account_bootstrapped");
     } else {
       await auth.login(email.value, password.value);
+      capturePostHogEvent("user_logged_in");
     }
     const redirectQuery = typeof route.query.redirect === "string" ? route.query.redirect : undefined;
     const destination =

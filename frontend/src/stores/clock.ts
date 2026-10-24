@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import { capturePostHogEvent } from "@/lib/posthog";
 import { request } from "@/lib/api";
 
 type ActiveClock = {
@@ -95,18 +96,21 @@ export const useClockStore = defineStore("clock", () => {
       };
     }
     startTicker();
+    capturePostHogEvent("clock_in");
   }
 
   async function startBreak() {
     if (!active.value || active.value.onBreak) return;
     await request<void>("/time/break/start", { method: "POST" });
     active.value = { ...active.value, onBreak: true, breakStartedAt: new Date().toISOString() };
+    capturePostHogEvent("break_started");
   }
 
   async function endBreak() {
     if (!active.value || !active.value.onBreak) return;
     await request<void>("/time/break/end", { method: "POST" });
     active.value = { ...active.value, onBreak: false, breakStartedAt: null };
+    capturePostHogEvent("break_ended");
   }
 
   async function clockOut(): Promise<ClockOutSummary> {
@@ -116,10 +120,15 @@ export const useClockStore = defineStore("clock", () => {
     });
     active.value = null;
     stopTicker();
-    return {
+    const summary = {
       workMinutes: Number(raw.workMinutes ?? raw.WorkMinutes ?? 0),
       breakMinutes: Number(raw.breakMinutes ?? raw.BreakMinutes ?? 0),
     };
+    capturePostHogEvent("clock_out", {
+      work_minutes: summary.workMinutes,
+      break_minutes: summary.breakMinutes,
+    });
+    return summary;
   }
 
   return {

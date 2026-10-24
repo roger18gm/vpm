@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { RouterLink } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import JobForm from "@/components/job/JobForm.vue";
 import type { Job, JobInput } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
@@ -26,6 +27,7 @@ async function onSubmit(payload: JobInput) {
   error.value = null;
   try {
     await jobsStore.updateJob(props.id, payload);
+    capturePostHogEvent("job_updated");
     await router.push({ name: "job-detail", params: { id: props.id } });
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Unable to update job.";

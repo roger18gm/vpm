@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { RouterLink } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpSelect from "@/components/ui/VpSelect.vue";
 import type { PhotoKind } from "@/types/job";
@@ -30,6 +31,7 @@ async function onSubmit() {
   error.value = null;
   try {
     await photosStore.upload(props.id, file.value, kind.value, caption.value || null);
+    capturePostHogEvent("photo_uploaded", { photo_kind: kind.value });
     toast.push("Photo uploaded");
     await router.push({ name: "job-photos", params: { id: props.id } });
   } catch (err) {

@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { RouterLink } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import JobForm from "@/components/job/JobForm.vue";
 import type { JobInput } from "@/types/job";
 import { useJobsStore } from "@/stores/jobs";
@@ -18,6 +19,10 @@ async function onSubmit(payload: JobInput) {
   error.value = null;
   try {
     const job = await jobsStore.createJob({ ...payload, status: payload.status ?? "scheduled" });
+    capturePostHogEvent("job_created", {
+      job_status: job.status,
+      job_priority: job.priority,
+    });
     toast.push("Job created");
     await router.push({ name: "job-detail", params: { id: job.id } });
   } catch (err) {

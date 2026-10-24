@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
+import { capturePostHogEvent } from "@/lib/posthog";
 import StatusBadge from "@/components/job/StatusBadge.vue";
 import PriorityChip from "@/components/job/PriorityChip.vue";
 import JobCrewList from "@/components/job/JobCrewList.vue";
@@ -70,6 +71,7 @@ async function saveStatus() {
     const assignments = job.value.assignments;
     const updated = await jobsStore.updateJob(props.id, jobToInput(job.value, { status: statusDraft.value }));
     job.value = { ...updated, assignments };
+    capturePostHogEvent("job_status_updated", { job_status: statusDraft.value });
     toast.push("Status updated");
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Unable to update status.";
@@ -79,6 +81,7 @@ async function saveStatus() {
 async function archiveJob() {
   if (!confirm("Archive this job?")) return;
   await jobsStore.archiveJob(props.id);
+  capturePostHogEvent("job_archived");
   await router.push({ name: "jobs" });
 }
 </script>

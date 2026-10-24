@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { capturePostHogEvent } from "@/lib/posthog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpSelect from "@/components/ui/VpSelect.vue";
@@ -107,8 +108,10 @@ async function handleSaved(payload: {
         ...payload,
         personId: timesheet.selectedPersonId ?? auth.user?.personId ?? null,
       });
+      capturePostHogEvent("time_entry_created", { break_count: payload.breaks.length });
     } else if (editingSession.value) {
       await timesheet.updateEntry(editingSession.value.timeEntryId, payload);
+      capturePostHogEvent("time_entry_updated", { break_count: payload.breaks.length });
     }
     formOpen.value = false;
     await clock.hydrateFromServer();
@@ -124,6 +127,7 @@ async function confirmDelete() {
   deleteBusy.value = true;
   try {
     await timesheet.deleteEntry(deletingSession.value.timeEntryId);
+    capturePostHogEvent("time_entry_deleted");
     deleteOpen.value = false;
     deletingSession.value = null;
     await clock.hydrateFromServer();

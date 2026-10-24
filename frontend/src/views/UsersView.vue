@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { Icon } from "@iconify/vue";
+import { capturePostHogEvent } from "@/lib/posthog";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import CreateUserModal from "@/components/user/CreateUserModal.vue";
 import VpButton from "@/components/ui/VpButton.vue";
@@ -60,6 +61,7 @@ async function onRoleChange(user: UserAdmin, role: string) {
   roleErrors.value = { ...roleErrors.value, [user.personId]: "" };
   try {
     await usersStore.updateRole(user.personId, role);
+    capturePostHogEvent("user_role_updated", { company_role: role });
   } catch (err) {
     roleErrors.value = {
       ...roleErrors.value,

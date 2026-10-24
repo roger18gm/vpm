@@ -1,4 +1,5 @@
 import { parseApiErrorMessage } from "@/lib/apiError";
+import { logPostHogError } from "@/lib/posthogLogs";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -70,6 +71,11 @@ export async function request<T>(path: string, init?: RequestInit, allowRetry = 
   }, allowRetry);
 
   if (!response.ok) {
+    logPostHogError("api_request_failed", {
+      request_method: init?.method ?? "GET",
+      response_status: response.status,
+      is_auth_request: path.startsWith("/auth/"),
+    });
     const body = await response.text();
     throw new ApiRequestError(parseApiErrorMessage(body, response.status), response.status);
   }
@@ -88,6 +94,9 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
   }, true);
 
   if (!response.ok) {
+    logPostHogError("api_file_upload_failed", {
+      response_status: response.status,
+    });
     const body = await response.text();
     throw new ApiRequestError(parseApiErrorMessage(body, response.status), response.status);
   }
