@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using VisionPaint.Data;
 using VisionPaint.Models;
 using VisionPaint.Services;
@@ -56,7 +57,17 @@ builder.Services.Configure<JobPhotoStorageOptions>(builder.Configuration.GetSect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(connectionString))
+    {
+        var npgsql = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            NoResetOnClose = true
+        };
+        connectionString = npgsql.ConnectionString;
+    }
+
+    options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
