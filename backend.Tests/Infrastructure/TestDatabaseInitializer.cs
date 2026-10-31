@@ -16,7 +16,8 @@ public static class TestDatabaseInitializer
         await using var db = CreateDbContext(connectionString);
         await db.Database.ExecuteSqlRawAsync(
             """
-            truncate table public.refresh_token,
+            truncate table public.payroll_summary_send,
+                          public.refresh_token,
                           public.time_break,
                           public.time_entry,
                           public.job_photo,

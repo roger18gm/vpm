@@ -262,3 +262,11 @@ create table if not exists job_checklist_item (
 );
 
 create index if not exists job_checklist_item_template_item_id_idx on job_checklist_item (template_item_id);
+
+create table if not exists payroll_summary_send (
+  company_id integer not null references company (id) on delete cascade,
+  week_start date not null,
+  claimed_at timestamptz not null,
+  sent_at timestamptz,
+  primary key (company_id, week_start)
+);

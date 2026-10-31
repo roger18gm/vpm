@@ -217,7 +217,7 @@ public sealed class TimeEntryService
             foreach (var entry in group)
             {
                 var breaks = breaksByEntryId.GetValueOrDefault(entry.Id);
-                var entryMinutes = ComputeEntryMinutes(entry, breaks, now);
+                var entryMinutes = TimeEntryMinutes.Compute(entry, breaks, now);
                 if (entry.ClockOutAt is null)
                 {
                     inProgress = true;
@@ -319,7 +319,7 @@ public sealed class TimeEntryService
         {
             var localDate = TimeZoneHelper.ToLocalDate(entry.ClockInAt, timeZone);
             var breaks = breaksByEntryId.GetValueOrDefault(entry.Id) ?? [];
-            var minutes = ComputeEntryMinutes(entry, breaks, now);
+            var minutes = TimeEntryMinutes.Compute(entry, breaks, now);
             var session = new WeeklyTimesheetSessionDto(
                 entry.Id,
                 entry.JobId,
@@ -373,24 +373,6 @@ public sealed class TimeEntryService
         return (result, null, 200);
     }
 
-    private sealed record EntryMinutes(int WorkMinutes, int BreakMinutes);
-
-    private static EntryMinutes ComputeEntryMinutes(
-        TimeEntry entry,
-        IReadOnlyList<TimeBreak>? breaks,
-        DateTimeOffset now)
-    {
-        var breakMinutes = SumBreakMinutes(breaks, now);
-        if (entry.ClockOutAt is null)
-        {
-            var partial = (int)Math.Max(0, (now - entry.ClockInAt).TotalMinutes);
-            return new EntryMinutes(Math.Max(0, partial - breakMinutes), breakMinutes);
-        }
-
-        var span = (int)Math.Max(0, (entry.ClockOutAt.Value - entry.ClockInAt).TotalMinutes);
-        return new EntryMinutes(Math.Max(0, span - entry.BreakMinutes), entry.BreakMinutes);
-    }
-
     private static IReadOnlyList<TimeBreakWindowDto> MapBreakWindows(
         IReadOnlyList<TimeBreak> breaks,
         DateTimeOffset now)
@@ -437,16 +419,6 @@ public sealed class TimeEntryService
             .ToListAsync(cancellationToken);
 
         return breaks.Sum(b => (int)Math.Max(0, (b.BreakEndAt!.Value - b.BreakStartAt).TotalMinutes));
-    }
-
-    private static int SumBreakMinutes(IReadOnlyList<TimeBreak>? breaks, DateTimeOffset now)
-    {
-        if (breaks is null)
-        {
-            return 0;
-        }
-
-        return breaks.Sum(b => (int)Math.Max(0, ((b.BreakEndAt ?? now) - b.BreakStartAt).TotalMinutes));
     }
 
     public async Task<(WeeklyTimesheetSessionDto? Result, string? Error, int StatusCode)> CreateManualEntryAsync(
@@ -879,7 +851,7 @@ public sealed class TimeEntryService
             .ToListAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        var minutes = ComputeEntryMinutes(entry, breaks, now);
+        var minutes = TimeEntryMinutes.Compute(entry, breaks, now);
         return new WeeklyTimesheetSessionDto(
             entry.Id,
             entry.JobId,

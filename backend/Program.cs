@@ -83,6 +83,13 @@ builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptio
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
 builder.Services.AddHttpClient("Brevo");
 builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<PayrollSummaryService>();
+builder.Services.AddScoped<IPayrollSummaryService>(sp => sp.GetRequiredService<PayrollSummaryService>());
+if (PayrollSummaryHost.ShouldRun(builder.Environment))
+{
+    builder.Services.AddHostedService<PayrollSummaryScheduler>();
+}
 
 if (isCiTestEnvironment || builder.Environment.IsDevelopment())
 {

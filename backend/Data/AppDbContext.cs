@@ -42,6 +42,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<JobChecklistItem> JobChecklistItems => Set<JobChecklistItem>();
 
+    public DbSet<PayrollSummarySend> PayrollSummarySends => Set<PayrollSummarySend>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -274,6 +276,16 @@ public sealed class AppDbContext : DbContext
             entity.Property(item => item.CompletedByPersonId).HasColumnName("completed_by_person_id");
             entity.Property(item => item.CompletedAt).HasColumnName("completed_at");
             entity.Property(item => item.Notes).HasColumnName("notes");
+        });
+
+        modelBuilder.Entity<PayrollSummarySend>(entity =>
+        {
+            entity.ToTable("payroll_summary_send");
+            entity.HasKey(send => new { send.CompanyId, send.WeekStart });
+            entity.Property(send => send.CompanyId).HasColumnName("company_id");
+            entity.Property(send => send.WeekStart).HasColumnName("week_start");
+            entity.Property(send => send.ClaimedAt).HasColumnName("claimed_at");
+            entity.Property(send => send.SentAt).HasColumnName("sent_at");
         });
     }
 }
