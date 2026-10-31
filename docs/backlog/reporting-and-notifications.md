@@ -1,6 +1,6 @@
 # Reporting and notifications
 
-**Status:** Item 1 has a design pending review. Items 2–4 are noted only.  
+**Status:** Item 1 has a design pending review. Item 2 is implemented. Items 3–4 are noted only.  
 **Date:** 2026-10-24
 
 Email today is password reset only (Brevo). The API has no scheduled job runner yet, so the email items need one before they can send.
@@ -16,6 +16,10 @@ Plan: [2026-10-24-monday-payroll-summary.md](../superpowers/plans/2026-10-24-mon
 ## 2. Job closed with gaps
 
 When a job is marked completed, email if required checklist items are still open, or if the job has no photos.
+
+Design: [2026-10-31-job-closed-with-gaps-design.md](../superpowers/specs/2026-10-31-job-closed-with-gaps-design.md)
+
+Plan: [2026-10-31-job-closed-with-gaps.md](../superpowers/plans/2026-10-31-job-closed-with-gaps.md)
 
 ## 3. Manager clock alerts
 

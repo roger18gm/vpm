@@ -17,17 +17,20 @@ public sealed class JobsController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly ICompanyAuthorizationService _companyAuthorization;
     private readonly IJobAccessService _jobAccess;
+    private readonly JobCompletionGapMailer _jobCompletionGapMailer;
 
     public JobsController(
         AppDbContext db,
         ICurrentUserService currentUserService,
         ICompanyAuthorizationService companyAuthorization,
-        IJobAccessService jobAccess)
+        IJobAccessService jobAccess,
+        JobCompletionGapMailer jobCompletionGapMailer)
     {
         _db = db;
         _currentUserService = currentUserService;
         _companyAuthorization = companyAuthorization;
         _jobAccess = jobAccess;
+        _jobCompletionGapMailer = jobCompletionGapMailer;
     }
 
     [HttpGet]
@@ -162,7 +165,7 @@ public sealed class JobsController : ControllerBase
         });
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-
+        await _jobCompletionGapMailer.NotifyAsync(job, null, currentUser.Email, cancellationToken);
         return CreatedAtAction(nameof(GetJob), new { id = job.Id }, job);
     }
 
@@ -212,6 +215,7 @@ public sealed class JobsController : ControllerBase
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+        await _jobCompletionGapMailer.NotifyAsync(job, previousStatus, currentUser.Email, cancellationToken);
         return Ok(job);
     }
 

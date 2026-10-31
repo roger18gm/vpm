@@ -85,6 +85,7 @@ builder.Services.AddHttpClient("Brevo");
 builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<PayrollSummaryService>();
+builder.Services.AddScoped<JobCompletionGapMailer>();
 builder.Services.AddScoped<IPayrollSummaryService>(sp => sp.GetRequiredService<PayrollSummaryService>());
 if (PayrollSummaryHost.ShouldRun(builder.Environment))
 {
