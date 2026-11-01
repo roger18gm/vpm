@@ -44,6 +44,10 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<PayrollSummarySend> PayrollSummarySends => Set<PayrollSummarySend>();
 
+    public DbSet<ClockAlertSlot> ClockAlertSlots => Set<ClockAlertSlot>();
+
+    public DbSet<ClockAlertSend> ClockAlertSends => Set<ClockAlertSend>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -286,6 +290,33 @@ public sealed class AppDbContext : DbContext
             entity.Property(send => send.WeekStart).HasColumnName("week_start");
             entity.Property(send => send.ClaimedAt).HasColumnName("claimed_at");
             entity.Property(send => send.SentAt).HasColumnName("sent_at");
+        });
+
+        modelBuilder.Entity<ClockAlertSlot>(entity =>
+        {
+            entity.ToTable("clock_alert_slot");
+            entity.HasKey(row => new { row.CompanyId, row.SlotOn, row.SlotKind });
+            entity.Property(row => row.CompanyId).HasColumnName("company_id");
+            entity.Property(row => row.SlotOn).HasColumnName("slot_on");
+            entity.Property(row => row.SlotKind).HasColumnName("slot_kind");
+            entity.Property(row => row.ClaimedAt).HasColumnName("claimed_at");
+            entity.Property(row => row.SentAt).HasColumnName("sent_at");
+        });
+
+        modelBuilder.Entity<ClockAlertSend>(entity =>
+        {
+            entity.ToTable("clock_alert_send", table => table.HasCheckConstraint(
+                "clock_alert_send_one_source",
+                "(time_break_id is not null and time_entry_id is null) or (time_break_id is null and time_entry_id is not null)"));
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(row => row.CompanyId).HasColumnName("company_id");
+            entity.Property(row => row.TimeBreakId).HasColumnName("time_break_id");
+            entity.Property(row => row.TimeEntryId).HasColumnName("time_entry_id");
+            entity.Property(row => row.FirstSentAt).HasColumnName("first_sent_at");
+            entity.Property(row => row.FollowUpSentAt).HasColumnName("follow_up_sent_at");
+            entity.HasIndex(row => row.TimeBreakId).IsUnique().HasFilter("time_break_id is not null");
+            entity.HasIndex(row => row.TimeEntryId).IsUnique().HasFilter("time_entry_id is not null");
         });
     }
 }

@@ -1,6 +1,6 @@
 # Reporting and notifications
 
-**Status:** Item 1 has a design pending review. Item 2 is implemented. Items 3–4 are noted only.  
+**Status:** Item 1 has a design pending review. Item 2 is implemented. Item 3 is implemented. Item 4 is noted only.  
 **Date:** 2026-10-24
 
 Email today is password reset only (Brevo). The API has no scheduled job runner yet, so the email items need one before they can send.
@@ -23,12 +23,11 @@ Plan: [2026-10-31-job-closed-with-gaps.md](../superpowers/plans/2026-10-31-job-c
 
 ## 3. Manager clock alerts
 
-Email the manager when:
+Email the lead or supervisor when a break runs long, or when someone is still clocked in after 7:00 PM on a weekday. The person on the clock is not the recipient.
 
-- someone has been on a break longer than a threshold (threshold not chosen yet)
-- someone is still clocked in after hours
+Design: [2026-10-31-manager-clock-alerts-design.md](../superpowers/specs/2026-10-31-manager-clock-alerts-design.md)
 
-The person on break is not the recipient. They are unlikely to read email while they are away from the phone.
+Plan: [2026-10-31-manager-clock-alerts.md](../superpowers/plans/2026-10-31-manager-clock-alerts.md)
 
 ## 4. In-app hours-by-job report
 

@@ -87,6 +87,12 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<PayrollSummaryService>();
 builder.Services.AddScoped<JobCompletionGapMailer>();
 builder.Services.AddScoped<IPayrollSummaryService>(sp => sp.GetRequiredService<PayrollSummaryService>());
+builder.Services.AddScoped<ClockAlertService>();
+builder.Services.AddScoped<IClockAlertService>(sp => sp.GetRequiredService<ClockAlertService>());
+if (ClockAlertHost.ShouldRun(builder.Environment))
+{
+    builder.Services.AddHostedService<ClockAlertScheduler>();
+}
 if (PayrollSummaryHost.ShouldRun(builder.Environment))
 {
     builder.Services.AddHostedService<PayrollSummaryScheduler>();
