@@ -112,6 +112,10 @@ public sealed class GustoTimeClient : IGustoTimeClient
             {
                 throw new GustoNotConfiguredException();
             }
+            catch (NotSupportedException)
+            {
+                throw new GustoNotConfiguredException();
+            }
             catch (HttpRequestException)
             {
                 throw new GustoNotConfiguredException();
@@ -187,7 +191,8 @@ public sealed class GustoTimeClient : IGustoTimeClient
                     try
                     {
                         using var document = JsonDocument.Parse(body);
-                        if (document.RootElement.TryGetProperty("uuid", out var uuidProperty)
+                        if (document.RootElement.ValueKind == JsonValueKind.Object
+                            && document.RootElement.TryGetProperty("uuid", out var uuidProperty)
                             && uuidProperty.ValueKind == JsonValueKind.String)
                         {
                             uuid = uuidProperty.GetString();

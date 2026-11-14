@@ -23,6 +23,8 @@ public sealed class StubGustoHandler : HttpMessageHandler
 
     public string? TokenBody { get; set; }
 
+    public string? TokenContentType { get; set; }
+
     public Exception? TimeSheetFailure { get; set; }
 
     public string? TimeSheetSuccessBody { get; set; }
@@ -39,6 +41,7 @@ public sealed class StubGustoHandler : HttpMessageHandler
             OnTimeSheet = null;
             TokenFailure = null;
             TokenBody = null;
+            TokenContentType = null;
             TimeSheetFailure = null;
             TimeSheetSuccessBody = null;
         }
@@ -61,9 +64,9 @@ public sealed class StubGustoHandler : HttpMessageHandler
                 throw TokenFailure;
             }
 
-            return Json(
-                HttpStatusCode.OK,
-                TokenBody ?? """{"access_token":"token-1","token_type":"Bearer","expires_in":7200}""");
+            var tokenBody = TokenBody ?? """{"access_token":"token-1","token_type":"Bearer","expires_in":7200}""";
+            var tokenMediaType = TokenContentType ?? "application/json";
+            return Json(HttpStatusCode.OK, tokenBody, tokenMediaType);
         }
 
         var body = request.Content is null
@@ -109,9 +112,12 @@ public sealed class StubGustoHandler : HttpMessageHandler
     {
     }
 
-    private static HttpResponseMessage Json(HttpStatusCode status, string json) =>
+    private static HttpResponseMessage Json(
+        HttpStatusCode status,
+        string json,
+        string mediaType = "application/json") =>
         new(status)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
+            Content = new StringContent(json, Encoding.UTF8, mediaType)
         };
 }

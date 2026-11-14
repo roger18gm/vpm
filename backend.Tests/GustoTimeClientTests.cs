@@ -138,6 +138,7 @@ public sealed class GustoTimeClientTests
     {
         var handler = new StubGustoHandler();
         handler.TokenBody = "not-json";
+        handler.TokenContentType = "text/plain";
         var client = CreateClient(handler, DemoOptions());
 
         await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
