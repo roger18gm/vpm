@@ -123,6 +123,57 @@ public sealed class GustoTimeClientTests
     }
 
     [Fact]
+    public async Task Prepare_throws_when_the_token_call_fails_to_connect()
+    {
+        var handler = new StubGustoHandler();
+        handler.TokenFailure = new HttpRequestException("connection refused");
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.PrepareAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Prepare_throws_when_the_token_body_is_not_json()
+    {
+        var handler = new StubGustoHandler();
+        handler.TokenBody = "not-json";
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.PrepareAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Post_connection_failure_is_not_accepted_and_does_not_stop_the_batch()
+    {
+        var handler = new StubGustoHandler();
+        handler.TimeSheetFailure = new HttpRequestException("connection refused");
+        var client = CreateClient(handler, DemoOptions());
+
+        var result = await client.PostTimeSheetAsync(SampleRequest(), CancellationToken.None);
+
+        Assert.False(result.Accepted);
+        Assert.False(result.StopBatch);
+        Assert.Equal("The Gusto request could not connect.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Post_non_json_success_is_accepted_with_a_null_uuid()
+    {
+        var handler = new StubGustoHandler();
+        handler.TimeSheetSuccessBody = "not-json";
+        var client = CreateClient(handler, DemoOptions());
+
+        var result = await client.PostTimeSheetAsync(SampleRequest(), CancellationToken.None);
+
+        Assert.True(result.Accepted);
+        Assert.Null(result.TimeSheetUuid);
+        Assert.False(result.StopBatch);
+        Assert.Equal((int)HttpStatusCode.Created, result.StatusCode);
+    }
+
+    [Fact]
     public async Task Prepare_rejects_missing_secret_before_http()
     {
         var handler = new StubGustoHandler();

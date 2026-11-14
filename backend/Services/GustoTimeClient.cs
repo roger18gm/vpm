@@ -73,31 +73,63 @@ public sealed class GustoTimeClient : IGustoTimeClient
         }
 
         var http = _httpClientFactory.CreateClient(HttpClientName);
-        using var response = await http.PostAsJsonAsync(
-            $"{GustoOptions.DemoBaseUrl}/oauth/token",
-            new
+        HttpResponseMessage response;
+        try
+        {
+            response = await http.PostAsJsonAsync(
+                $"{GustoOptions.DemoBaseUrl}/oauth/token",
+                new
+                {
+                    client_id = _options.ClientId,
+                    client_secret = _options.ClientSecret,
+                    refresh_token = _options.RefreshToken,
+                    grant_type = "refresh_token"
+                },
+                cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            throw new GustoNotConfiguredException();
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GustoNotConfiguredException();
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
             {
-                client_id = _options.ClientId,
-                client_secret = _options.ClientSecret,
-                refresh_token = _options.RefreshToken,
-                grant_type = "refresh_token"
-            },
-            cancellationToken);
+                throw new GustoNotConfiguredException();
+            }
 
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new GustoNotConfiguredException();
+            TokenResponse? payload;
+            try
+            {
+                payload = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
+            }
+            catch (JsonException)
+            {
+                throw new GustoNotConfiguredException();
+            }
+            catch (HttpRequestException)
+            {
+                throw new GustoNotConfiguredException();
+            }
+            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new GustoNotConfiguredException();
+            }
+
+            if (payload is null || string.IsNullOrWhiteSpace(payload.AccessToken))
+            {
+                throw new GustoNotConfiguredException();
+            }
+
+            var expiresIn = payload.ExpiresIn <= 0 ? 7200 : payload.ExpiresIn;
+            _cache.Set(payload.AccessToken, DateTimeOffset.UtcNow.AddSeconds(expiresIn));
+            return payload.AccessToken;
         }
-
-        var payload = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
-        if (payload is null || string.IsNullOrWhiteSpace(payload.AccessToken))
-        {
-            throw new GustoNotConfiguredException();
-        }
-
-        var expiresIn = payload.ExpiresIn <= 0 ? 7200 : payload.ExpiresIn;
-        _cache.Set(payload.AccessToken, DateTimeOffset.UtcNow.AddSeconds(expiresIn));
-        return payload.AccessToken;
     }
 
     private async Task<GustoTimeSheetResult> SendSheetAsync(
@@ -139,6 +171,10 @@ public sealed class GustoTimeClient : IGustoTimeClient
         {
             return new GustoTimeSheetResult(false, null, 0, "The Gusto request timed out.", false);
         }
+        catch (HttpRequestException)
+        {
+            return new GustoTimeSheetResult(false, null, 0, "The Gusto request could not connect.", false);
+        }
 
         using (response)
         {
@@ -148,10 +184,17 @@ public sealed class GustoTimeClient : IGustoTimeClient
                 string? uuid = null;
                 if (!string.IsNullOrWhiteSpace(body))
                 {
-                    using var document = JsonDocument.Parse(body);
-                    if (document.RootElement.TryGetProperty("uuid", out var uuidProperty))
+                    try
                     {
-                        uuid = uuidProperty.GetString();
+                        using var document = JsonDocument.Parse(body);
+                        if (document.RootElement.TryGetProperty("uuid", out var uuidProperty)
+                            && uuidProperty.ValueKind == JsonValueKind.String)
+                        {
+                            uuid = uuidProperty.GetString();
+                        }
+                    }
+                    catch (JsonException)
+                    {
                     }
                 }
 

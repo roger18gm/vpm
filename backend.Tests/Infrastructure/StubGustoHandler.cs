@@ -19,6 +19,14 @@ public sealed class StubGustoHandler : HttpMessageHandler
 
     public Action<string>? OnTimeSheet { get; set; }
 
+    public Exception? TokenFailure { get; set; }
+
+    public string? TokenBody { get; set; }
+
+    public Exception? TimeSheetFailure { get; set; }
+
+    public string? TimeSheetSuccessBody { get; set; }
+
     public void Reset()
     {
         lock (_gate)
@@ -29,6 +37,10 @@ public sealed class StubGustoHandler : HttpMessageHandler
             TimeSheetApiVersions.Clear();
             TimeSheetStatuses.Clear();
             OnTimeSheet = null;
+            TokenFailure = null;
+            TokenBody = null;
+            TimeSheetFailure = null;
+            TimeSheetSuccessBody = null;
         }
     }
 
@@ -44,13 +56,22 @@ public sealed class StubGustoHandler : HttpMessageHandler
                 TokenRequests++;
             }
 
-            return Json(HttpStatusCode.OK, """{"access_token":"token-1","token_type":"Bearer","expires_in":7200}""");
+            if (TokenFailure is not null)
+            {
+                throw TokenFailure;
+            }
+
+            return Json(
+                HttpStatusCode.OK,
+                TokenBody ?? """{"access_token":"token-1","token_type":"Bearer","expires_in":7200}""");
         }
 
         var body = request.Content is null
             ? ""
             : await request.Content.ReadAsStringAsync(cancellationToken);
         int status;
+        Exception? failure;
+        string? successBody;
         lock (_gate)
         {
             TimeSheetBodies.Add(body);
@@ -60,13 +81,20 @@ public sealed class StubGustoHandler : HttpMessageHandler
                     ? values.Single()
                     : null);
             status = TimeSheetStatuses.Count > 0 ? TimeSheetStatuses.Dequeue() : 201;
+            failure = TimeSheetFailure;
+            successBody = TimeSheetSuccessBody;
         }
 
         OnTimeSheet?.Invoke(body);
 
+        if (failure is not null)
+        {
+            throw failure;
+        }
+
         if (status == 201)
         {
-            return Json(HttpStatusCode.Created, """{"uuid":"ts-from-stub"}""");
+            return Json(HttpStatusCode.Created, successBody ?? """{"uuid":"ts-from-stub"}""");
         }
 
         if (status == 401)

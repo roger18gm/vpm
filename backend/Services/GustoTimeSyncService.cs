@@ -179,7 +179,7 @@ public sealed class GustoTimeSyncService
                 sync.Status = "failed";
                 sync.ErrorMessage = result.ErrorMessage ?? "Gusto rejected the access token.";
                 sync.UpdatedAt = DateTimeOffset.UtcNow;
-                await _db.SaveChangesAsync(cancellationToken);
+                await _db.SaveChangesAsync(CancellationToken.None);
                 failed.Add(new GustoSyncFailureDto(entry.Id, sync.ErrorMessage));
                 stop = true;
                 continue;
@@ -200,7 +200,7 @@ public sealed class GustoTimeSyncService
             }
 
             sync.UpdatedAt = DateTimeOffset.UtcNow;
-            await _db.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(CancellationToken.None);
         }
 
         return (new GustoWeekSyncResultDto(sent, alreadySynced, skippedOpen, skippedZero, failed), null, 200);
