@@ -15,7 +15,16 @@ export type WeeklyTimesheetSession = {
   workMinutes: number;
   breakMinutes: number;
   inProgress: boolean;
+  gustoSyncStatus: "pending" | "synced" | "failed" | null;
   breaks: TimeBreakWindow[];
+};
+
+export type GustoWeekSyncResult = {
+  sent: number;
+  alreadySynced: number;
+  skippedOpen: number;
+  skippedZero: number;
+  failed: { timeEntryId: number; message: string }[];
 };
 
 export type WeeklyTimesheetDay = {
