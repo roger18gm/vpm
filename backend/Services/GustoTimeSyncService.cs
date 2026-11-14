@@ -174,6 +174,17 @@ public sealed class GustoTimeSyncService
                 entry.Id,
                 result.StatusCode);
 
+            if (result.StopBatch)
+            {
+                sync.Status = "failed";
+                sync.ErrorMessage = result.ErrorMessage ?? "Gusto rejected the access token.";
+                sync.UpdatedAt = DateTimeOffset.UtcNow;
+                await _db.SaveChangesAsync(cancellationToken);
+                failed.Add(new GustoSyncFailureDto(entry.Id, sync.ErrorMessage));
+                stop = true;
+                continue;
+            }
+
             if (result.Accepted)
             {
                 sync.Status = "synced";

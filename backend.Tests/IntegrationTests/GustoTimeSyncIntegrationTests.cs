@@ -254,6 +254,186 @@ public sealed class GustoTimeSyncIntegrationTests : IClassFixture<BackendIntegra
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
 
+    [Fact]
+    public async Task One_gusto_422_fails_that_shift_and_the_next_still_sends()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Partial house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var first = MondayShift(weekStart, 8, 60);
+        var second = MondayShift(weekStart, 10, 60);
+        var firstId = await AddShiftAsync(jobId, personId, first.Start, first.End);
+        var secondId = await AddShiftAsync(jobId, personId, second.Start, second.End);
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.TimeSheetStatuses.Enqueue(422);
+        handler.TimeSheetStatuses.Enqueue(201);
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+        var body = await response.Content.ReadFromJsonAsync<GustoWeekSyncResultDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, body!.Sent);
+        Assert.Single(body.Failed);
+        Assert.Equal(firstId, body.Failed[0].TimeEntryId);
+        Assert.Contains("invalid time sheet", body.Failed[0].Message);
+        await using var db = CreateDb();
+        Assert.Equal("failed", (await db.GustoTimeSheetSyncs.SingleAsync(row => row.TimeEntryId == firstId)).Status);
+        Assert.Equal("synced", (await db.GustoTimeSheetSyncs.SingleAsync(row => row.TimeEntryId == secondId)).Status);
+
+        var sheet = await _fixture.Client.GetFromJsonAsync<WeeklyTimesheetDto>(
+            $"/api/time/weekly?weekStart={weekStart}&personId={personId}");
+        var sessions = sheet!.Days.SelectMany(day => day.Sessions).ToList();
+        Assert.Contains(sessions, session => session.TimeEntryId == firstId && session.GustoSyncStatus == "failed");
+        Assert.Contains(sessions, session => session.TimeEntryId == secondId && session.GustoSyncStatus == "synced");
+    }
+
+    [Fact]
+    public async Task Failed_shift_is_sent_again_on_the_next_attempt()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Retry house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var shift = MondayShift(weekStart, 8, 60);
+        var entryId = await AddShiftAsync(jobId, personId, shift.Start, shift.End);
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.TimeSheetStatuses.Enqueue(422);
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        await _fixture.Client.PostAsJsonAsync("/api/time/weekly/gusto-sync", new { weekStart, personId });
+        handler.Reset();
+        handler.TimeSheetStatuses.Enqueue(201);
+
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+        var body = await response.Content.ReadFromJsonAsync<GustoWeekSyncResultDto>();
+
+        Assert.Equal(1, body!.Sent);
+        Assert.Single(handler.TimeSheetBodies);
+        await using var db = CreateDb();
+        var row = await db.GustoTimeSheetSyncs.SingleAsync(sync => sync.TimeEntryId == entryId);
+        Assert.Equal("synced", row.Status);
+        Assert.Equal("ts-from-stub", row.GustoTimeSheetUuid);
+    }
+
+    [Fact]
+    public async Task Unauthorized_then_success_retries_the_same_shift()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Retry auth house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var shift = MondayShift(weekStart, 8, 60);
+        var entryId = await AddShiftAsync(jobId, personId, shift.Start, shift.End);
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.TimeSheetStatuses.Enqueue(401);
+        handler.TimeSheetStatuses.Enqueue(201);
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+        var body = await response.Content.ReadFromJsonAsync<GustoWeekSyncResultDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, body!.Sent);
+        Assert.Empty(body.Failed);
+        Assert.Equal(2, handler.TokenRequests);
+        Assert.Equal(2, handler.TimeSheetBodies.Count);
+        Assert.All(handler.TimeSheetBodies, json => Assert.Contains(entryId.ToString(), json));
+        await using var db = CreateDb();
+        Assert.Equal("synced", (await db.GustoTimeSheetSyncs.SingleAsync(row => row.TimeEntryId == entryId)).Status);
+    }
+
+    [Fact]
+    public async Task Unauthorized_gusto_stops_the_batch_after_one_shift()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Auth house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var first = MondayShift(weekStart, 8, 60);
+        var second = MondayShift(weekStart, 11, 60);
+        var firstId = await AddShiftAsync(jobId, personId, first.Start, first.End);
+        var secondId = await AddShiftAsync(jobId, personId, second.Start, second.End);
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.TimeSheetStatuses.Enqueue(401);
+        handler.TimeSheetStatuses.Enqueue(401);
+
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+        var body = await response.Content.ReadFromJsonAsync<GustoWeekSyncResultDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, body!.Sent);
+        Assert.Single(body.Failed);
+        Assert.Equal(firstId, body.Failed[0].TimeEntryId);
+        Assert.Equal(2, handler.TimeSheetBodies.Count);
+        Assert.All(handler.TimeSheetBodies, json => Assert.Contains(firstId.ToString(), json));
+        await using var db = CreateDb();
+        Assert.Equal("failed", (await db.GustoTimeSheetSyncs.SingleAsync(row => row.TimeEntryId == firstId)).Status);
+        Assert.False(await db.GustoTimeSheetSyncs.AnyAsync(row => row.TimeEntryId == secondId));
+    }
+
+    [Fact]
+    public async Task Missing_gusto_configuration_returns_503_before_any_row()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Config house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var shift = MondayShift(weekStart, 8, 60);
+        await AddShiftAsync(jobId, personId, shift.Start, shift.End);
+
+        await using var factory = new TestWebApplicationFactory(_fixture.Database.ConnectionString, gustoConfigured: false);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", owner.AccessToken);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not configured", text, StringComparison.OrdinalIgnoreCase);
+        await using var db = CreateDb();
+        Assert.Empty(await db.GustoTimeSheetSyncs.ToListAsync());
+        Assert.Equal(0, factory.Services.GetRequiredService<StubGustoHandler>().TokenRequests);
+    }
+
+    [Fact]
+    public async Task Live_gusto_host_returns_503_before_any_row()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var (jobId, personId, companyId) = await SeedJobAsync(owner, "Live host house");
+        await LinkPersonAsync(personId, companyId);
+        var weekStart = CurrentWeekStartSunday();
+        var shift = MondayShift(weekStart, 8, 60);
+        await AddShiftAsync(jobId, personId, shift.Start, shift.End);
+
+        await using var factory = new TestWebApplicationFactory(
+            _fixture.Database.ConnectionString,
+            gustoConfigured: true,
+            gustoBaseUrl: "https://api.gusto.com");
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", owner.AccessToken);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/time/weekly/gusto-sync",
+            new { weekStart, personId });
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(0, factory.Services.GetRequiredService<StubGustoHandler>().TimeSheetBodies.Count);
+    }
+
     private async Task<AuthTokenResponse> BootstrapOwnerAsync()
     {
         return await _fixture.AuthClient.BootstrapAsync(new BootstrapRequest(
