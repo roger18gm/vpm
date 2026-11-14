@@ -12,11 +12,16 @@ public sealed class TimeController : ControllerBase
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly TimeEntryService _timeEntryService;
+    private readonly GustoTimeSyncService _gustoTimeSyncService;
 
-    public TimeController(ICurrentUserService currentUserService, TimeEntryService timeEntryService)
+    public TimeController(
+        ICurrentUserService currentUserService,
+        TimeEntryService timeEntryService,
+        GustoTimeSyncService gustoTimeSyncService)
     {
         _currentUserService = currentUserService;
         _timeEntryService = timeEntryService;
+        _gustoTimeSyncService = gustoTimeSyncService;
     }
 
     [HttpGet("active")]
@@ -141,6 +146,30 @@ public sealed class TimeController : ControllerBase
             personId,
             cancellationToken);
 
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPost("weekly/gusto-sync")]
+    public async Task<ActionResult<GustoWeekSyncResultDto>> SendWeekToGusto(
+        [FromBody] GustoWeekSyncRequest request,
+        CancellationToken cancellationToken)
+    {
+        var currentUser = await _currentUserService.GetAsync(cancellationToken);
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var (result, error, statusCode) = await _gustoTimeSyncService.SendWeekAsync(
+            currentUser,
+            request.WeekStart,
+            request.PersonId,
+            cancellationToken);
         if (error is not null)
         {
             return StatusCode(statusCode, new { message = error });

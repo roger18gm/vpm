@@ -300,6 +300,10 @@ public sealed class TimeEntryService
             .ToList();
 
         var entryIds = entries.Select(e => e.Id).ToList();
+        var syncStatusByEntryId = await _db.GustoTimeSheetSyncs
+            .AsNoTracking()
+            .Where(row => entryIds.Contains(row.TimeEntryId))
+            .ToDictionaryAsync(row => row.TimeEntryId, row => row.Status, cancellationToken);
         var breaksByEntryId = await _db.TimeBreaks
             .AsNoTracking()
             .Where(b => entryIds.Contains(b.TimeEntryId))
@@ -329,7 +333,8 @@ public sealed class TimeEntryService
                 minutes.WorkMinutes,
                 minutes.BreakMinutes,
                 entry.ClockOutAt is null,
-                MapBreakWindows(breaks, now));
+                MapBreakWindows(breaks, now),
+                syncStatusByEntryId.GetValueOrDefault(entry.Id));
 
             if (!sessionsByDate.TryGetValue(localDate, out var list))
             {

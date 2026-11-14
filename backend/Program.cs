@@ -89,6 +89,7 @@ builder.Services.AddHttpClient(GustoTimeClient.HttpClientName, client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddScoped<IGustoTimeClient, GustoTimeClient>();
+builder.Services.AddScoped<GustoTimeSyncService>();
 builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<PayrollSummaryService>();
