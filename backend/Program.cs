@@ -82,6 +82,14 @@ builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection(BrevoO
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
 builder.Services.AddHttpClient("Brevo");
+builder.Services.Configure<GustoOptions>(builder.Configuration.GetSection(GustoOptions.SectionName));
+builder.Services.AddSingleton<GustoAccessTokenCache>();
+builder.Services.AddHttpClient(GustoTimeClient.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddScoped<IGustoTimeClient, GustoTimeClient>();
+builder.Services.AddScoped<GustoTimeSyncService>();
 builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<PayrollSummaryService>();

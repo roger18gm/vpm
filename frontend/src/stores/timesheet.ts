@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { request } from "@/lib/api";
-import type { PersonSummary, TimeEntryInput, WeeklyTimesheet } from "@/types/timesheet";
+import type { GustoWeekSyncResult, PersonSummary, TimeEntryInput, WeeklyTimesheet } from "@/types/timesheet";
 import { isManagerRole } from "@/types/auth";
 import { useAuthStore } from "@/stores/auth";
 import { plainDateToIso, parsePlainDate, shiftWeek, sundayOfWeek } from "@/utils/week";
@@ -29,6 +29,7 @@ function normalizeWeekly(raw: Record<string, unknown>): WeeklyTimesheet {
         workMinutes: Number(s.workMinutes ?? s.WorkMinutes ?? 0),
         breakMinutes: Number(s.breakMinutes ?? s.BreakMinutes ?? 0),
         inProgress: Boolean(s.inProgress ?? s.InProgress ?? false),
+        gustoSyncStatus: normalizeGustoStatus(s.gustoSyncStatus ?? s.GustoSyncStatus),
         breaks: ((s.breaks ?? s.Breaks ?? []) as Record<string, unknown>[]).map((b) => ({
           id: Number(b.id ?? b.Id ?? 0),
           breakStartAt: String(b.breakStartAt ?? b.BreakStartAt ?? ""),
@@ -37,6 +38,24 @@ function normalizeWeekly(raw: Record<string, unknown>): WeeklyTimesheet {
           minutes: Number(b.minutes ?? b.Minutes ?? 0),
         })),
       })),
+    })),
+  };
+}
+
+function normalizeGustoStatus(value: unknown): "pending" | "synced" | "failed" | null {
+  return value === "pending" || value === "synced" || value === "failed" ? value : null;
+}
+
+function normalizeGustoSync(raw: Record<string, unknown>): GustoWeekSyncResult {
+  const failed = (raw.failed ?? raw.Failed ?? []) as Record<string, unknown>[];
+  return {
+    sent: Number(raw.sent ?? raw.Sent ?? 0),
+    alreadySynced: Number(raw.alreadySynced ?? raw.AlreadySynced ?? 0),
+    skippedOpen: Number(raw.skippedOpen ?? raw.SkippedOpen ?? 0),
+    skippedZero: Number(raw.skippedZero ?? raw.SkippedZero ?? 0),
+    failed: failed.map((row) => ({
+      timeEntryId: Number(row.timeEntryId ?? row.TimeEntryId ?? 0),
+      message: String(row.message ?? row.Message ?? ""),
     })),
   };
 }
@@ -58,6 +77,14 @@ export const useTimesheetStore = defineStore("timesheet", () => {
   const selectedPersonId = ref<number | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const gustoSyncing = ref(false);
+  const gustoSyncResult = ref<GustoWeekSyncResult | null>(null);
+  const gustoSyncError = ref<string | null>(null);
+
+  function clearGustoSyncFeedback() {
+    gustoSyncResult.value = null;
+    gustoSyncError.value = null;
+  }
 
   const canPickPerson = computed(() => isManagerRole(auth.user?.companyRole));
 
@@ -131,11 +158,32 @@ export const useTimesheetStore = defineStore("timesheet", () => {
     }
   }
 
+  async function sendWeekToGusto() {
+    gustoSyncing.value = true;
+    gustoSyncError.value = null;
+    gustoSyncResult.value = null;
+    try {
+      const personId = selectedPersonId.value ?? auth.user?.personId;
+      const raw = await request<Record<string, unknown>>("/time/weekly/gusto-sync", {
+        method: "POST",
+        body: JSON.stringify({ weekStart: weekStart.value, personId }),
+      });
+      gustoSyncResult.value = normalizeGustoSync(raw);
+      await fetchWeekly();
+    } catch (err) {
+      gustoSyncError.value = err instanceof Error ? err.message : "Unable to send hours to Gusto.";
+    } finally {
+      gustoSyncing.value = false;
+    }
+  }
+
   function goToPreviousWeek() {
+    clearGustoSyncFeedback();
     weekStart.value = plainDateToIso(shiftWeek(parsePlainDate(weekStart.value), -1));
   }
 
   function goToNextWeek() {
+    clearGustoSyncFeedback();
     weekStart.value = plainDateToIso(shiftWeek(parsePlainDate(weekStart.value), 1));
   }
 
@@ -158,6 +206,11 @@ export const useTimesheetStore = defineStore("timesheet", () => {
     createEntry,
     updateEntry,
     deleteEntry,
+    gustoSyncing,
+    gustoSyncResult,
+    gustoSyncError,
+    sendWeekToGusto,
+    clearGustoSyncFeedback,
     goToPreviousWeek,
     goToNextWeek,
     resetToCurrentWeek,

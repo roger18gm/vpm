@@ -161,6 +161,29 @@ Fields:
 - `break_type`
 - `notes`
 
+### `gusto_employee_link`
+Maps one VisionPaint person to one Gusto demo employee and that employee's compensation job.
+
+Fields:
+- `person_id`
+- `company_id`
+- `gusto_employee_uuid`
+- `gusto_job_uuid`
+- `created_at`
+- `updated_at`
+
+### `gusto_time_sheet_sync`
+One send attempt for one `time_entry`. `status` is `pending`, `synced`, or `failed`.
+
+Fields:
+- `time_entry_id`
+- `gusto_time_sheet_uuid`
+- `status`
+- `hours_worked`
+- `error_message`
+- `created_at`
+- `updated_at`
+
 ### `job_note`
 Short updates and comments on a job.
 

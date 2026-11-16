@@ -30,6 +30,7 @@ const formError = ref<string | null>(null);
 const deleteOpen = ref(false);
 const deletingSession = ref<WeeklyTimesheetSession | null>(null);
 const deleteBusy = ref(false);
+const gustoConfirmOpen = ref(false);
 
 const isManager = computed(() => isManagerRole(auth.user?.companyRole));
 
@@ -68,7 +69,13 @@ function canDeleteSession(session: WeeklyTimesheetSession) {
 }
 
 async function onPersonChange(value: string) {
+  timesheet.clearGustoSyncFeedback();
   timesheet.selectedPersonId = Number(value);
+}
+
+async function confirmGustoSend() {
+  await timesheet.sendWeekToGusto();
+  gustoConfirmOpen.value = false;
 }
 
 function openCreate(dayDate: string) {
@@ -161,6 +168,16 @@ async function confirmDelete() {
       @confirm="confirmDelete"
     />
 
+    <ConfirmDialog
+      :open="gustoConfirmOpen"
+      title="Send week to Gusto"
+      :message="`Send ${timesheet.sheet?.personName ?? 'this worker'}'s closed shifts for this week to the Gusto demo. Shifts already sent stay as they are.`"
+      confirm-label="Send week to Gusto"
+      :busy="timesheet.gustoSyncing"
+      @cancel="gustoConfirmOpen = false"
+      @confirm="confirmGustoSend"
+    />
+
     <div v-if="timesheet.canPickPerson" class="mb-4">
       <VpSelect
         :model-value="String(timesheet.selectedPersonId ?? '')"
@@ -186,6 +203,36 @@ async function confirmDelete() {
       <VpButton variant="secondary" @click="timesheet.goToNextWeek">→</VpButton>
     </div>
 
+    <div v-if="isManager" class="mb-4">
+      <VpButton
+        variant="secondary"
+        class="w-full"
+        :disabled="timesheet.gustoSyncing"
+        @click="gustoConfirmOpen = true"
+      >
+        Send week to Gusto
+      </VpButton>
+      <p v-if="timesheet.gustoSyncError" class="text-sm text-error text-center mt-2">
+        {{ timesheet.gustoSyncError }}
+      </p>
+      <div v-if="timesheet.gustoSyncResult" class="text-sm text-center mt-2">
+        <p>
+          Sent {{ timesheet.gustoSyncResult.sent }}.
+          Already synced {{ timesheet.gustoSyncResult.alreadySynced }}.
+          Skipped open {{ timesheet.gustoSyncResult.skippedOpen }}.
+          Skipped zero {{ timesheet.gustoSyncResult.skippedZero }}.
+          Failed {{ timesheet.gustoSyncResult.failed.length }}.
+        </p>
+        <p
+          v-for="failure in timesheet.gustoSyncResult.failed"
+          :key="failure.timeEntryId"
+          class="text-error"
+        >
+          Shift {{ failure.timeEntryId }}: {{ failure.message }}
+        </p>
+      </div>
+    </div>
+
     <p v-if="!timesheet.canManageTimesheet && !timesheet.isCurrentWeek" class="text-xs text-muted text-center mb-4">
       Past weeks are read-only for your role.
     </p>
@@ -207,6 +254,7 @@ async function confirmDelete() {
           :day="day"
           :timezone-id="timesheet.sheet.timezoneId"
           :can-manage="timesheet.canManageTimesheet"
+          :show-gusto-status="isManager"
           :can-edit-session="canEditSession"
           :can-delete-session="canDeleteSession"
           @add="openCreate(day.date)"

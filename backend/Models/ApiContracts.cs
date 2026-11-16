@@ -118,7 +118,19 @@ public sealed record WeeklyTimesheetSessionDto(
     int WorkMinutes,
     int BreakMinutes,
     bool InProgress,
-    IReadOnlyList<TimeBreakWindowDto> Breaks);
+    IReadOnlyList<TimeBreakWindowDto> Breaks,
+    string? GustoSyncStatus = null);
+
+public sealed record GustoWeekSyncRequest(string WeekStart, int PersonId);
+
+public sealed record GustoSyncFailureDto(int TimeEntryId, string Message);
+
+public sealed record GustoWeekSyncResultDto(
+    int Sent,
+    int AlreadySynced,
+    int SkippedOpen,
+    int SkippedZero,
+    IReadOnlyList<GustoSyncFailureDto> Failed);
 
 public sealed record WeeklyTimesheetDayDto(
     string Date,

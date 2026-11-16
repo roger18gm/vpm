@@ -48,6 +48,10 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<ClockAlertSend> ClockAlertSends => Set<ClockAlertSend>();
 
+    public DbSet<GustoEmployeeLink> GustoEmployeeLinks => Set<GustoEmployeeLink>();
+
+    public DbSet<GustoTimeSheetSync> GustoTimeSheetSyncs => Set<GustoTimeSheetSync>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -317,6 +321,31 @@ public sealed class AppDbContext : DbContext
             entity.Property(row => row.FollowUpSentAt).HasColumnName("follow_up_sent_at");
             entity.HasIndex(row => row.TimeBreakId).IsUnique().HasFilter("time_break_id is not null");
             entity.HasIndex(row => row.TimeEntryId).IsUnique().HasFilter("time_entry_id is not null");
+        });
+
+        modelBuilder.Entity<GustoEmployeeLink>(entity =>
+        {
+            entity.ToTable("gusto_employee_link");
+            entity.HasKey(link => link.PersonId);
+            entity.Property(link => link.PersonId).HasColumnName("person_id");
+            entity.Property(link => link.CompanyId).HasColumnName("company_id");
+            entity.Property(link => link.GustoEmployeeUuid).HasColumnName("gusto_employee_uuid");
+            entity.Property(link => link.GustoJobUuid).HasColumnName("gusto_job_uuid");
+            entity.Property(link => link.CreatedAt).HasColumnName("created_at");
+            entity.Property(link => link.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<GustoTimeSheetSync>(entity =>
+        {
+            entity.ToTable("gusto_time_sheet_sync");
+            entity.HasKey(row => row.TimeEntryId);
+            entity.Property(row => row.TimeEntryId).HasColumnName("time_entry_id");
+            entity.Property(row => row.GustoTimeSheetUuid).HasColumnName("gusto_time_sheet_uuid");
+            entity.Property(row => row.Status).HasColumnName("status");
+            entity.Property(row => row.HoursWorked).HasColumnName("hours_worked").HasPrecision(8, 4);
+            entity.Property(row => row.ErrorMessage).HasColumnName("error_message");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

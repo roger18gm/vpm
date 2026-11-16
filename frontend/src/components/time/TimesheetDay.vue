@@ -9,6 +9,7 @@ defineProps<{
   day: WeeklyTimesheetDay;
   timezoneId: string;
   canManage: boolean;
+  showGustoStatus: boolean;
   canEditSession: (session: WeeklyTimesheetSession) => boolean;
   canDeleteSession: (session: WeeklyTimesheetSession) => boolean;
 }>();
@@ -48,6 +49,12 @@ const expanded = ref(false);
             </div>
             <div class="text-right shrink-0">
               <p class="font-semibold">{{ formatMinutes(session.workMinutes) }} hrs</p>
+              <p v-if="showGustoStatus && session.gustoSyncStatus === 'synced'" class="text-xs text-muted">
+                Sent to Gusto
+              </p>
+              <p v-if="showGustoStatus && session.gustoSyncStatus === 'failed'" class="text-xs text-error">
+                Gusto failed
+              </p>
               <p v-if="session.inProgress" class="text-xs text-primary">In progress</p>
             </div>
           </div>
