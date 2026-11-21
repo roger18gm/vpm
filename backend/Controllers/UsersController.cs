@@ -108,6 +108,27 @@ public sealed class UsersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("{personId:int}/gusto-link")]
+    public async Task<ActionResult<GustoEmployeeLinkDto>> SaveGustoLink(
+        int personId,
+        [FromBody] SaveGustoEmployeeLinkRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var (admin, failure) = await GetAdminOrFailureAsync(cancellationToken);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        var (result, error, statusCode) = await _gustoLinks.SaveAsync(admin!, personId, request, cancellationToken);
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<UserAdminDto>> CreateUser(
         [FromBody] CreateUserRequest request,
