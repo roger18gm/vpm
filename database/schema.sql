@@ -310,6 +310,9 @@ create table if not exists gusto_employee_link (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists gusto_employee_link_company_employee_uidx
+  on gusto_employee_link (company_id, gusto_employee_uuid);
+
 create table if not exists gusto_time_sheet_sync (
   time_entry_id integer primary key references time_entry (id) on delete cascade,
   gusto_time_sheet_uuid text,

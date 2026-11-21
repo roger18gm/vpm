@@ -172,6 +172,8 @@ Fields:
 - `created_at`
 - `updated_at`
 
+One `gusto_employee_uuid` belongs to one person inside a company (`gusto_employee_link_company_employee_uidx`).
+
 ### `gusto_time_sheet_sync`
 One send attempt for one `time_entry`. `status` is `pending`, `synced`, or `failed`.
 

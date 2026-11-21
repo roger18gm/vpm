@@ -333,6 +333,9 @@ public sealed class AppDbContext : DbContext
             entity.Property(link => link.GustoJobUuid).HasColumnName("gusto_job_uuid");
             entity.Property(link => link.CreatedAt).HasColumnName("created_at");
             entity.Property(link => link.UpdatedAt).HasColumnName("updated_at");
+            entity.HasIndex(link => new { link.CompanyId, link.GustoEmployeeUuid })
+                .IsUnique()
+                .HasDatabaseName("gusto_employee_link_company_employee_uidx");
         });
 
         modelBuilder.Entity<GustoTimeSheetSync>(entity =>
