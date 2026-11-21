@@ -268,6 +268,18 @@ public sealed class GustoTimeClientTests
     }
 
     [Fact]
+    public async Task ListEmployees_throws_when_the_token_call_fails_to_connect()
+    {
+        var handler = new StubGustoHandler();
+        handler.TokenFailure = new HttpRequestException("connection refused");
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.ListEmployeesAsync(CancellationToken.None));
+        Assert.Empty(handler.EmployeeRequestUris);
+    }
+
+    [Fact]
     public async Task ListEmployees_throws_when_gusto_returns_500()
     {
         var handler = new StubGustoHandler();

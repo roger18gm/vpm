@@ -134,6 +134,7 @@ watch(
     <select
       :value="selectedEmployeeUuid"
       :disabled="saving"
+      aria-label="Gusto employee"
       class="w-full border border-border rounded-md px-2 py-2 text-sm min-h-[44px] bg-surface"
       @change="onEmployeeChange(($event.target as HTMLSelectElement).value)"
     >
@@ -160,6 +161,7 @@ watch(
       v-else-if="selectedEmployee && selectedEmployee.jobs.length > 1"
       v-model="selectedJobUuid"
       :disabled="saving"
+      aria-label="Compensation job"
       class="w-full border border-border rounded-md px-2 py-2 text-sm min-h-[44px] bg-surface mt-2"
     >
       <option value="" disabled>Choose a compensation job</option>
