@@ -4,11 +4,12 @@ import { Icon } from "@iconify/vue";
 import { capturePostHogEvent } from "@/lib/posthog";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import CreateUserModal from "@/components/user/CreateUserModal.vue";
+import UserGustoLink from "@/components/user/UserGustoLink.vue";
 import VpButton from "@/components/ui/VpButton.vue";
 import VpCard from "@/components/ui/VpCard.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUsersStore } from "@/stores/users";
-import type { UserAdmin } from "@/types/user";
+import type { GustoEmployeeLink, UserAdmin } from "@/types/user";
 
 const auth = useAuthStore();
 const usersStore = useUsersStore();
@@ -25,7 +26,12 @@ const roleOptions = computed(() => {
 
 onMounted(() => {
   void usersStore.fetchUsers();
+  void usersStore.fetchGustoDirectory();
 });
+
+function onGustoSaved(link: GustoEmployeeLink) {
+  usersStore.rememberGustoLink(link);
+}
 
 function formatLastLogin(value: string | null): string {
   if (!value) {
@@ -88,16 +94,19 @@ async function onCreated() {
     </template>
   </PageHeader>
 
+  <p v-if="usersStore.gustoDirectoryError" class="text-sm text-error mb-3">{{ usersStore.gustoDirectoryError }}</p>
+
   <p v-if="usersStore.loading" class="text-sm text-muted">Loading users…</p>
   <p v-else-if="usersStore.error" class="text-sm text-error">{{ usersStore.error }}</p>
 
   <VpCard v-else class="overflow-x-auto">
-    <table class="w-full text-sm min-w-[640px]">
+    <table class="w-full text-sm min-w-[920px]">
       <thead>
         <tr class="text-left text-xs uppercase text-muted border-b border-border">
           <th class="py-2 pr-3 font-semibold">Name</th>
           <th class="py-2 pr-3 font-semibold">Email</th>
           <th class="py-2 pr-3 font-semibold">Role</th>
+          <th class="py-2 pr-3 font-semibold">Gusto</th>
           <th class="py-2 pr-3 font-semibold">Status</th>
           <th class="py-2 pr-3 font-semibold">Clock</th>
           <th class="py-2 font-semibold hidden md:table-cell">Last login</th>
@@ -123,6 +132,17 @@ async function onCreated() {
             </select>
             <span v-else class="capitalize">{{ user.companyRole }}</span>
             <p v-if="roleErrors[user.personId]" class="text-xs text-error mt-1">{{ roleErrors[user.personId] }}</p>
+          </td>
+          <td class="py-3 pr-3">
+            <UserGustoLink
+              :user="user"
+              :employees="usersStore.gustoDirectory?.employees ?? []"
+              :links="usersStore.gustoDirectory?.links ?? []"
+              :users="usersStore.users"
+              :directory-loading="usersStore.gustoDirectoryLoading"
+              :directory-error="usersStore.gustoDirectoryError"
+              @saved="onGustoSaved"
+            />
           </td>
           <td class="py-3 pr-3">
             <span

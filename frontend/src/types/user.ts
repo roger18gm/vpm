@@ -19,3 +19,28 @@ export type CreateUserInput = {
 };
 
 export const USER_ROLES = ["crew", "manager", "admin", "owner"] as const;
+
+export type GustoDirectoryJob = {
+  uuid: string;
+  title: string;
+  primary: boolean;
+};
+
+export type GustoDirectoryEmployee = {
+  uuid: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  jobs: GustoDirectoryJob[];
+};
+
+export type GustoEmployeeLink = {
+  personId: number;
+  gustoEmployeeUuid: string;
+  gustoJobUuid: string;
+};
+
+export type GustoEmployeeDirectory = {
+  employees: GustoDirectoryEmployee[];
+  links: GustoEmployeeLink[];
+};

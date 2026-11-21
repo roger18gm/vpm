@@ -1,7 +1,14 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { request } from "@/lib/api";
-import type { CreateUserInput, UserAdmin } from "@/types/user";
+import type {
+  CreateUserInput,
+  GustoDirectoryEmployee,
+  GustoDirectoryJob,
+  GustoEmployeeDirectory,
+  GustoEmployeeLink,
+  UserAdmin,
+} from "@/types/user";
 
 function normalizeUser(raw: Record<string, unknown>): UserAdmin {
   return {
@@ -18,10 +25,49 @@ function normalizeUser(raw: Record<string, unknown>): UserAdmin {
   };
 }
 
+function normalizeJob(raw: Record<string, unknown>): GustoDirectoryJob {
+  return {
+    uuid: String(raw.uuid ?? raw.Uuid ?? ""),
+    title: String(raw.title ?? raw.Title ?? ""),
+    primary: Boolean(raw.primary ?? raw.Primary ?? false),
+  };
+}
+
+function normalizeEmployee(raw: Record<string, unknown>): GustoDirectoryEmployee {
+  const jobs = (raw.jobs ?? raw.Jobs ?? []) as Record<string, unknown>[];
+  return {
+    uuid: String(raw.uuid ?? raw.Uuid ?? ""),
+    firstName: String(raw.firstName ?? raw.FirstName ?? ""),
+    lastName: String(raw.lastName ?? raw.LastName ?? ""),
+    email: String(raw.email ?? raw.Email ?? ""),
+    jobs: Array.isArray(jobs) ? jobs.map(normalizeJob) : [],
+  };
+}
+
+function normalizeLink(raw: Record<string, unknown>): GustoEmployeeLink {
+  return {
+    personId: Number(raw.personId ?? raw.PersonId ?? 0),
+    gustoEmployeeUuid: String(raw.gustoEmployeeUuid ?? raw.GustoEmployeeUuid ?? ""),
+    gustoJobUuid: String(raw.gustoJobUuid ?? raw.GustoJobUuid ?? ""),
+  };
+}
+
+function normalizeDirectory(raw: Record<string, unknown>): GustoEmployeeDirectory {
+  const employees = (raw.employees ?? raw.Employees ?? []) as Record<string, unknown>[];
+  const links = (raw.links ?? raw.Links ?? []) as Record<string, unknown>[];
+  return {
+    employees: Array.isArray(employees) ? employees.map(normalizeEmployee) : [],
+    links: Array.isArray(links) ? links.map(normalizeLink) : [],
+  };
+}
+
 export const useUsersStore = defineStore("users", () => {
   const users = ref<UserAdmin[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const gustoDirectory = ref<GustoEmployeeDirectory | null>(null);
+  const gustoDirectoryLoading = ref(false);
+  const gustoDirectoryError = ref<string | null>(null);
 
   async function fetchUsers() {
     loading.value = true;
@@ -35,6 +81,42 @@ export const useUsersStore = defineStore("users", () => {
     } finally {
       loading.value = false;
     }
+  }
+
+  async function fetchGustoDirectory() {
+    gustoDirectoryLoading.value = true;
+    gustoDirectoryError.value = null;
+    try {
+      const raw = await request<Record<string, unknown>>("/users/gusto-directory");
+      gustoDirectory.value = normalizeDirectory(raw);
+    } catch (err) {
+      gustoDirectory.value = null;
+      gustoDirectoryError.value = err instanceof Error
+        ? err.message
+        : "The Gusto demo is not configured or could not be reached.";
+    } finally {
+      gustoDirectoryLoading.value = false;
+    }
+  }
+
+  function rememberGustoLink(link: GustoEmployeeLink) {
+    if (!gustoDirectory.value) {
+      return;
+    }
+
+    const links = gustoDirectory.value.links.filter((existing) => existing.personId !== link.personId);
+    gustoDirectory.value = { ...gustoDirectory.value, links: [...links, link] };
+  }
+
+  async function saveGustoLink(
+    personId: number,
+    input: { gustoEmployeeUuid: string; gustoJobUuid: string },
+  ): Promise<GustoEmployeeLink> {
+    const raw = await request<Record<string, unknown>>(`/users/${personId}/gusto-link`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+    return normalizeLink(raw);
   }
 
   async function createUser(input: CreateUserInput): Promise<UserAdmin> {
@@ -57,5 +139,18 @@ export const useUsersStore = defineStore("users", () => {
     return user;
   }
 
-  return { users, loading, error, fetchUsers, createUser, updateRole };
+  return {
+    users,
+    loading,
+    error,
+    gustoDirectory,
+    gustoDirectoryLoading,
+    gustoDirectoryError,
+    fetchUsers,
+    fetchGustoDirectory,
+    rememberGustoLink,
+    saveGustoLink,
+    createUser,
+    updateRole,
+  };
 });
