@@ -29,6 +29,32 @@ public sealed class StubGustoHandler : HttpMessageHandler
 
     public string? TimeSheetSuccessBody { get; set; }
 
+    public Queue<string> EmployeePageBodies { get; } = new();
+
+    public Queue<int> EmployeeStatuses { get; } = new();
+
+    public List<string> EmployeeRequestUris { get; } = [];
+
+    public List<string?> EmployeeAuthorization { get; } = [];
+
+    public List<string?> EmployeeApiVersions { get; } = [];
+
+    public Exception? EmployeeFailure { get; set; }
+
+    public Dictionary<string, string> JobBodies { get; } = new(StringComparer.Ordinal);
+
+    public string DefaultJobBody { get; set; } = "[]";
+
+    public Queue<int> JobStatuses { get; } = new();
+
+    public List<string> JobRequestUris { get; } = [];
+
+    public List<string?> JobAuthorization { get; } = [];
+
+    public List<string?> JobApiVersions { get; } = [];
+
+    public Exception? JobFailure { get; set; }
+
     public void Reset()
     {
         lock (_gate)
@@ -44,6 +70,19 @@ public sealed class StubGustoHandler : HttpMessageHandler
             TokenContentType = null;
             TimeSheetFailure = null;
             TimeSheetSuccessBody = null;
+            EmployeePageBodies.Clear();
+            EmployeeStatuses.Clear();
+            EmployeeRequestUris.Clear();
+            EmployeeAuthorization.Clear();
+            EmployeeApiVersions.Clear();
+            EmployeeFailure = null;
+            JobBodies.Clear();
+            DefaultJobBody = "[]";
+            JobStatuses.Clear();
+            JobRequestUris.Clear();
+            JobAuthorization.Clear();
+            JobApiVersions.Clear();
+            JobFailure = null;
         }
     }
 
@@ -69,6 +108,39 @@ public sealed class StubGustoHandler : HttpMessageHandler
             return Json(HttpStatusCode.OK, tokenBody, tokenMediaType);
         }
 
+        if (request.Method == HttpMethod.Get && path.EndsWith("/employees", StringComparison.Ordinal))
+        {
+            return DirectoryResponse(
+                request,
+                EmployeeRequestUris,
+                EmployeeAuthorization,
+                EmployeeApiVersions,
+                EmployeeStatuses,
+                EmployeePageBodies,
+                "[]",
+                EmployeeFailure);
+        }
+
+        if (request.Method == HttpMethod.Get && path.EndsWith("/jobs", StringComparison.Ordinal))
+        {
+            var uuid = EmployeeUuidFromJobPath(path);
+            var fallback = DefaultJobBody;
+            if (uuid is not null && JobBodies.TryGetValue(uuid, out var specific))
+            {
+                fallback = specific;
+            }
+
+            return DirectoryResponse(
+                request,
+                JobRequestUris,
+                JobAuthorization,
+                JobApiVersions,
+                JobStatuses,
+                bodies: null,
+                fallback,
+                JobFailure);
+        }
+
         var body = request.Content is null
             ? ""
             : await request.Content.ReadAsStringAsync(cancellationToken);
@@ -79,10 +151,7 @@ public sealed class StubGustoHandler : HttpMessageHandler
         {
             TimeSheetBodies.Add(body);
             TimeSheetAuthorization.Add(request.Headers.Authorization?.ToString());
-            TimeSheetApiVersions.Add(
-                request.Headers.TryGetValues("X-Gusto-API-Version", out var values)
-                    ? values.Single()
-                    : null);
+            TimeSheetApiVersions.Add(Header(request, "X-Gusto-API-Version"));
             status = TimeSheetStatuses.Count > 0 ? TimeSheetStatuses.Dequeue() : 201;
             failure = TimeSheetFailure;
             successBody = TimeSheetSuccessBody;
@@ -111,6 +180,62 @@ public sealed class StubGustoHandler : HttpMessageHandler
     protected override void Dispose(bool disposing)
     {
     }
+
+    private HttpResponseMessage DirectoryResponse(
+        HttpRequestMessage request,
+        List<string> uris,
+        List<string?> authorization,
+        List<string?> apiVersions,
+        Queue<int> statuses,
+        Queue<string>? bodies,
+        string fallbackBody,
+        Exception? failure)
+    {
+        int status;
+        string body;
+        lock (_gate)
+        {
+            uris.Add(request.RequestUri?.ToString() ?? "");
+            authorization.Add(request.Headers.Authorization?.ToString());
+            apiVersions.Add(Header(request, "X-Gusto-API-Version"));
+            status = statuses.Count > 0 ? statuses.Dequeue() : 200;
+            body = bodies is not null && bodies.Count > 0 ? bodies.Dequeue() : fallbackBody;
+        }
+
+        if (failure is not null)
+        {
+            throw failure;
+        }
+
+        if (status == 401)
+        {
+            return Json(HttpStatusCode.Unauthorized, """{"message":"unauthorized"}""");
+        }
+
+        if (status is >= 200 and < 300)
+        {
+            return Json((HttpStatusCode)status, body);
+        }
+
+        return Json((HttpStatusCode)status, """{"message":"gusto failed"}""");
+    }
+
+    private static string? EmployeeUuidFromJobPath(string path)
+    {
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 4
+            && parts[0] == "v1"
+            && parts[1] == "employees"
+            && parts[3] == "jobs")
+        {
+            return parts[2];
+        }
+
+        return null;
+    }
+
+    private static string? Header(HttpRequestMessage request, string name) =>
+        request.Headers.TryGetValues(name, out var values) ? values.Single() : null;
 
     private static HttpResponseMessage Json(
         HttpStatusCode status,

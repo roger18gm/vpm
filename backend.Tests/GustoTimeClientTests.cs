@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using VisionPaint.Services;
@@ -185,6 +186,113 @@ public sealed class GustoTimeClientTests
         await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
             client.PrepareAsync(CancellationToken.None));
         Assert.Equal(0, handler.TokenRequests);
+    }
+
+    [Fact]
+    public async Task ListEmployees_reads_onboarded_employees_and_jobs_without_pay()
+    {
+        var handler = new StubGustoHandler();
+        handler.EmployeePageBodies.Enqueue(
+            """[{"uuid":"emp-1","first_name":"Ada","last_name":"Painter","email":"ada@example.com","jobs":[{"rate":"99.00"}]}]""");
+        handler.JobBodies["emp-1"] =
+            """[{"uuid":"job-1","title":"Painter","primary":true,"rate":"25.00","payment_unit":"Hour","compensations":[{"rate":"25.00"}]}]""";
+        var client = CreateClient(handler, DemoOptions());
+
+        var employees = await client.ListEmployeesAsync(CancellationToken.None);
+
+        var employee = Assert.Single(employees);
+        Assert.Equal("emp-1", employee.Uuid);
+        Assert.Equal("Ada", employee.FirstName);
+        Assert.Equal("Painter", employee.LastName);
+        Assert.Equal("ada@example.com", employee.Email);
+        var job = Assert.Single(employee.Jobs);
+        Assert.Equal("job-1", job.Uuid);
+        Assert.Equal("Painter", job.Title);
+        Assert.True(job.Primary);
+        Assert.Contains("/v1/companies/company-uuid/employees", handler.EmployeeRequestUris.Single());
+        Assert.Contains("onboarded_active=true", handler.EmployeeRequestUris.Single());
+        Assert.Contains("per=100", handler.EmployeeRequestUris.Single());
+        Assert.Contains("/v1/employees/emp-1/jobs", handler.JobRequestUris.Single());
+        Assert.Equal("Bearer token-1", handler.EmployeeAuthorization.Single());
+        Assert.Equal("2026-06-15", handler.EmployeeApiVersions.Single());
+        Assert.Empty(handler.TimeSheetBodies);
+    }
+
+    [Fact]
+    public async Task ListEmployees_follows_a_full_page()
+    {
+        var handler = new StubGustoHandler();
+        handler.EmployeePageBodies.Enqueue(EmployeePage(100));
+        handler.EmployeePageBodies.Enqueue(
+            """[{"uuid":"emp-last","first_name":"Zed","last_name":"Last","email":"zed@example.com"}]""");
+        handler.DefaultJobBody = """[{"uuid":"job-default","title":"Painter","primary":true}]""";
+        var client = CreateClient(handler, DemoOptions());
+
+        var employees = await client.ListEmployeesAsync(CancellationToken.None);
+
+        Assert.Equal(101, employees.Count);
+        Assert.Equal(2, handler.EmployeeRequestUris.Count);
+        Assert.Equal(101, handler.JobRequestUris.Count);
+        Assert.Contains("page=2", handler.EmployeeRequestUris[1]);
+    }
+
+    [Fact]
+    public async Task ListEmployees_refreshes_once_after_401()
+    {
+        var handler = new StubGustoHandler();
+        handler.EmployeeStatuses.Enqueue(401);
+        handler.EmployeeStatuses.Enqueue(200);
+        handler.EmployeePageBodies.Enqueue("""[]""");
+        handler.EmployeePageBodies.Enqueue(
+            """[{"uuid":"emp-1","first_name":"Ada","last_name":"Painter","email":"ada@example.com"}]""");
+        handler.DefaultJobBody = """[{"uuid":"job-1","title":"Painter","primary":false}]""";
+        var client = CreateClient(handler, DemoOptions());
+
+        var employees = await client.ListEmployeesAsync(CancellationToken.None);
+
+        Assert.Single(employees);
+        Assert.Equal(2, handler.TokenRequests);
+        Assert.Equal(2, handler.EmployeeRequestUris.Count);
+    }
+
+    [Fact]
+    public async Task ListEmployees_rejects_a_non_demo_host_before_http()
+    {
+        var handler = new StubGustoHandler();
+        var client = CreateClient(handler, DemoOptions("https://api.gusto.com"));
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.ListEmployeesAsync(CancellationToken.None));
+        Assert.Equal(0, handler.TokenRequests);
+        Assert.Empty(handler.EmployeeRequestUris);
+    }
+
+    [Fact]
+    public async Task ListEmployees_throws_when_gusto_returns_500()
+    {
+        var handler = new StubGustoHandler();
+        handler.EmployeeStatuses.Enqueue(500);
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.ListEmployeesAsync(CancellationToken.None));
+    }
+
+    private static string EmployeePage(int count)
+    {
+        var builder = new StringBuilder("[");
+        for (var i = 0; i < count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append($$"""{"uuid":"emp-{{i}}","first_name":"A","last_name":"{{i}}","email":"a{{i}}@example.com"}""");
+        }
+
+        builder.Append(']');
+        return builder.ToString();
     }
 
     private static GustoTimeClient CreateClient(

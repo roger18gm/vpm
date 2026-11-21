@@ -7,6 +7,8 @@ public interface IGustoTimeClient
     Task<GustoTimeSheetResult> PostTimeSheetAsync(
         GustoTimeSheetRequest request,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<GustoDirectoryEmployee>> ListEmployeesAsync(CancellationToken cancellationToken);
 }
 
 public sealed record GustoTimeSheetRequest(
@@ -25,3 +27,12 @@ public sealed record GustoTimeSheetResult(
     int StatusCode,
     string? ErrorMessage,
     bool StopBatch);
+
+public sealed record GustoDirectoryJob(string Uuid, string Title, bool Primary);
+
+public sealed record GustoDirectoryEmployee(
+    string Uuid,
+    string FirstName,
+    string LastName,
+    string Email,
+    IReadOnlyList<GustoDirectoryJob> Jobs);

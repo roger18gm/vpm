@@ -10,6 +10,9 @@ public sealed class GustoTimeClient : IGustoTimeClient
 {
     public const string HttpClientName = "Gusto";
 
+    private const int PageSize = 100;
+    private const int MaxPages = 20;
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GustoOptions _options;
     private readonly GustoAccessTokenCache _cache;
@@ -53,6 +56,31 @@ public sealed class GustoTimeClient : IGustoTimeClient
         {
             return new GustoTimeSheetResult(false, null, 0, ex.Message, true);
         }
+    }
+
+    public async Task<IReadOnlyList<GustoDirectoryEmployee>> ListEmployeesAsync(CancellationToken cancellationToken)
+    {
+        var employees = new List<GustoDirectoryEmployee>();
+        var companyUuid = Uri.EscapeDataString(_options.CompanyUuid.Trim());
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            var body = await GetDemoJsonAsync(
+                $"/v1/companies/{companyUuid}/employees?onboarded_active=true&page={page}&per={PageSize}",
+                cancellationToken);
+            var pageEmployees = ParseEmployees(body);
+            foreach (var employee in pageEmployees)
+            {
+                var jobs = await ListJobsAsync(employee.Uuid, cancellationToken);
+                employees.Add(employee with { Jobs = jobs });
+            }
+
+            if (pageEmployees.Count < PageSize)
+            {
+                return employees;
+            }
+        }
+
+        throw new GustoNotConfiguredException();
     }
 
     private async Task<string> GetTokenAsync(bool forceRefresh, CancellationToken cancellationToken)
@@ -237,6 +265,158 @@ public sealed class GustoTimeClient : IGustoTimeClient
 
         return body.Length <= 500 ? body : body[..500];
     }
+
+    private async Task<IReadOnlyList<GustoDirectoryJob>> ListJobsAsync(
+        string employeeUuid,
+        CancellationToken cancellationToken)
+    {
+        var jobs = new List<GustoDirectoryJob>();
+        var escaped = Uri.EscapeDataString(employeeUuid);
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            var body = await GetDemoJsonAsync(
+                $"/v1/employees/{escaped}/jobs?page={page}&per={PageSize}",
+                cancellationToken);
+            var pageJobs = ParseJobs(body);
+            jobs.AddRange(pageJobs);
+            if (pageJobs.Count < PageSize)
+            {
+                return jobs;
+            }
+        }
+
+        throw new GustoNotConfiguredException();
+    }
+
+    private async Task<string> GetDemoJsonAsync(string relativeUrl, CancellationToken cancellationToken)
+    {
+        var token = await GetTokenAsync(forceRefresh: false, cancellationToken);
+        var (status, body) = await GetJsonAsync(token, relativeUrl, cancellationToken);
+        if (status == (int)System.Net.HttpStatusCode.Unauthorized)
+        {
+            token = await GetTokenAsync(forceRefresh: true, cancellationToken);
+            (status, body) = await GetJsonAsync(token, relativeUrl, cancellationToken);
+        }
+
+        if (status is < 200 or >= 300)
+        {
+            throw new GustoNotConfiguredException();
+        }
+
+        return body;
+    }
+
+    private async Task<(int Status, string Body)> GetJsonAsync(
+        string token,
+        string relativeUrl,
+        CancellationToken cancellationToken)
+    {
+        var http = _httpClientFactory.CreateClient(HttpClientName);
+        using var message = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{_options.BaseUrl.Trim().TrimEnd('/')}{relativeUrl}");
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        message.Headers.TryAddWithoutValidation("X-Gusto-API-Version", _options.ApiVersion);
+        try
+        {
+            using var response = await http.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ((int)response.StatusCode, body);
+        }
+        catch (HttpRequestException)
+        {
+            throw new GustoNotConfiguredException();
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GustoNotConfiguredException();
+        }
+    }
+
+    private static List<GustoDirectoryEmployee> ParseEmployees(string json)
+    {
+        using var document = ParseArray(json);
+        var employees = new List<GustoDirectoryEmployee>();
+        foreach (var item in document.RootElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var uuid = ReadString(item, "uuid");
+            if (string.IsNullOrWhiteSpace(uuid))
+            {
+                continue;
+            }
+
+            employees.Add(new GustoDirectoryEmployee(
+                uuid,
+                ReadString(item, "first_name"),
+                ReadString(item, "last_name"),
+                ReadString(item, "email"),
+                Array.Empty<GustoDirectoryJob>()));
+        }
+
+        return employees;
+    }
+
+    private static List<GustoDirectoryJob> ParseJobs(string json)
+    {
+        using var document = ParseArray(json);
+        var jobs = new List<GustoDirectoryJob>();
+        foreach (var item in document.RootElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var uuid = ReadString(item, "uuid");
+            if (string.IsNullOrWhiteSpace(uuid))
+            {
+                continue;
+            }
+
+            jobs.Add(new GustoDirectoryJob(uuid, ReadString(item, "title"), ReadBool(item, "primary")));
+        }
+
+        return jobs;
+    }
+
+    private static JsonDocument ParseArray(string json)
+    {
+        try
+        {
+            var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                document.Dispose();
+                throw new GustoNotConfiguredException();
+            }
+
+            return document;
+        }
+        catch (JsonException)
+        {
+            throw new GustoNotConfiguredException();
+        }
+    }
+
+    private static string ReadString(JsonElement item, string name)
+    {
+        if (item.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String)
+        {
+            return property.GetString() ?? "";
+        }
+
+        return "";
+    }
+
+    private static bool ReadBool(JsonElement item, string name) =>
+        item.TryGetProperty(name, out var property)
+        && property.ValueKind is JsonValueKind.True or JsonValueKind.False
+        && property.GetBoolean();
 
     private sealed class TokenResponse
     {
