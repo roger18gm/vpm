@@ -22,7 +22,7 @@ After a successful send, the manager opens Gusto's Time Tracking page and uses G
 | Hours | Work minutes ÷ 60, rounded half away from zero to 4 decimal places, `pay_classification` `Regular` |
 | Overtime | Not classified in this version |
 | Payroll run | Not called. No `payroll_syncs` request and no Gusto webhooks |
-| Employee link | Seeded `gusto_employee_link` rows. No linking screen |
+| Employee link | Owner or admin links an active user from Users. See [2026-11-20-gusto-employee-link-design.md](2026-11-20-gusto-employee-link-design.md). |
 | Already accepted | A `synced` shift is not sent again, including after a later edit in VisionPaint |
 | Who can send | `owner`, `admin`, `manager` |
 | Secrets | Company uuid, client id, client secret, and refresh token in configuration. Access tokens in memory only |
@@ -73,7 +73,7 @@ Configuration keys, not columns:
 - `Gusto:CompanyUuid`
 - `Gusto:ApiVersion` = `2026-06-15`
 
-Demo link rows are inserted for the demo crew by the developer. The migration creates the tables and does not insert those rows. Tests insert the rows they need.
+The Users page writes link rows. The migration creates the tables and does not insert those rows. Tests insert the rows they need.
 
 ## API
 
@@ -166,7 +166,7 @@ The button lives on the existing weekly timesheet (`WeeklyTimesheet.vue`), under
 
 On each session, a manager sees **Sent to Gusto** or **Gusto failed** from `gustoSyncStatus`. Crew members do not see the button or those labels. A shift edited after a successful send still shows **Sent to Gusto**.
 
-There is no screen for pasting Gusto ids. A 422 for an unlinked worker is shown on the timesheet, and nothing is sent.
+There is no screen for pasting Gusto ids. An owner or admin links a user from Users. A 422 for an unlinked worker is shown on the timesheet, and nothing is sent.
 
 ## Testing
 
@@ -189,4 +189,4 @@ When this is implemented, check the payroll revisit box on Q2 in `docs/design/st
 
 ## Out of scope
 
-Overtime and double overtime, calling Gusto's payroll sync, webhooks, creating Gusto employees, a linking screen, live Gusto, and updating a sheet that Gusto has already accepted.
+Overtime and double overtime, calling Gusto's payroll sync, webhooks, creating Gusto employees, live Gusto, and updating a sheet that Gusto has already accepted.

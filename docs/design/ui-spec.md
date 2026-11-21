@@ -336,6 +336,18 @@ Desktop sidebar includes Checklists. Mobile bottom nav does not.
 
 ---
 
+### SCR-017 — Users
+
+**Route:** `/users`
+**Roles:** owner, admin
+
+**List:** name, email, role, membership status, clock, last login, Gusto.
+**Gusto column:** active membership only. The employee dropdown comes from `GET /api/users/gusto-directory`. One compensation job is shown as text. Two or more jobs use a second dropdown. Save calls `PUT /api/users/:personId/gusto-link`. An employee already linked to someone else is disabled and labeled with that person's name. A saved link can be replaced. There is no unlink.
+**Inactive membership:** an em dash in the Gusto column.
+**Directory failure:** the user list remains, and the Gusto message is shown above the table.
+
+---
+
 ### SCR-013 — Account
 
 **Route:** `/account`  

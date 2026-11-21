@@ -46,7 +46,7 @@ Authorization rules: [auth design](../superpowers/specs/2026-05-07-auth-design.m
 | SCR-015 | Job areas (rooms)          | `/jobs/:id/areas`      | assigned + managers   | P2       | `GET/POST/PATCH/DELETE /api/jobs/:id/areas`   |
 | SCR-016 | Checklists                 | `/jobs/:id/checklist`  | assigned + managers   | P2       | `GET/POST /api/jobs/:id/checklist`, `PATCH /api/jobs/:id/checklist/items/:templateItemId` |
 | SCR-018 | Checklist templates        | `/checklists`          | owner, admin, manager | P2       | `/api/checklist-templates` |
-| SCR-017 | Users admin                | `/users`               | owner, admin          | P1       | `GET/POST/PATCH /api/users`                   |
+| SCR-017 | Users admin                | `/users`               | owner, admin          | P1       | `GET/POST/PATCH /api/users`, `GET /api/users/gusto-directory`, `PUT /api/users/:personId/gusto-link` |
 
 ---
 
