@@ -25,17 +25,20 @@ public sealed class UsersController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly ICompanyAuthorizationService _companyAuthorization;
     private readonly IPasswordHasher<AuthUser> _passwordHasher;
+    private readonly GustoEmployeeLinkService _gustoLinks;
 
     public UsersController(
         AppDbContext db,
         ICurrentUserService currentUserService,
         ICompanyAuthorizationService companyAuthorization,
-        IPasswordHasher<AuthUser> passwordHasher)
+        IPasswordHasher<AuthUser> passwordHasher,
+        GustoEmployeeLinkService gustoLinks)
     {
         _db = db;
         _currentUserService = currentUserService;
         _companyAuthorization = companyAuthorization;
         _passwordHasher = passwordHasher;
+        _gustoLinks = gustoLinks;
     }
 
     private async Task<(CurrentUserContext? User, ActionResult? Failure)> GetAdminOrFailureAsync(
@@ -85,6 +88,24 @@ public sealed class UsersController : ControllerBase
         var jobTitles = await LoadJobTitlesAsync(openByPerson.Values.Select(entry => entry.JobId).Distinct().ToList(), cancellationToken);
 
         return Ok(rows.Select(row => ToDto(row, openByPerson, jobTitles)).ToList());
+    }
+
+    [HttpGet("gusto-directory")]
+    public async Task<ActionResult<GustoEmployeeDirectoryDto>> GetGustoDirectory(CancellationToken cancellationToken)
+    {
+        var (admin, failure) = await GetAdminOrFailureAsync(cancellationToken);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        var (result, error, statusCode) = await _gustoLinks.GetDirectoryAsync(admin!, cancellationToken);
+        if (error is not null)
+        {
+            return StatusCode(statusCode, new { message = error });
+        }
+
+        return Ok(result);
     }
 
     [HttpPost]

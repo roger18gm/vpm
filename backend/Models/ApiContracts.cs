@@ -204,6 +204,23 @@ public sealed record CreateUserRequest(
 
 public sealed record UpdateUserRoleRequest(string CompanyRole);
 
+public sealed record GustoDirectoryJobDto(string Uuid, string Title, bool Primary);
+
+public sealed record GustoDirectoryEmployeeDto(
+    string Uuid,
+    string FirstName,
+    string LastName,
+    string Email,
+    IReadOnlyList<GustoDirectoryJobDto> Jobs);
+
+public sealed record GustoEmployeeLinkDto(int PersonId, string GustoEmployeeUuid, string GustoJobUuid);
+
+public sealed record GustoEmployeeDirectoryDto(
+    IReadOnlyList<GustoDirectoryEmployeeDto> Employees,
+    IReadOnlyList<GustoEmployeeLinkDto> Links);
+
+public sealed record SaveGustoEmployeeLinkRequest(string? GustoEmployeeUuid, string? GustoJobUuid);
+
 public sealed record JobAreaDto(
     int Id,
     int JobId,

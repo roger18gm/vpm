@@ -90,6 +90,7 @@ builder.Services.AddHttpClient(GustoTimeClient.HttpClientName, client =>
 });
 builder.Services.AddScoped<IGustoTimeClient, GustoTimeClient>();
 builder.Services.AddScoped<GustoTimeSyncService>();
+builder.Services.AddScoped<GustoEmployeeLinkService>();
 builder.Services.AddSingleton<IEmailSender, BrevoEmailSender>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<PayrollSummaryService>();

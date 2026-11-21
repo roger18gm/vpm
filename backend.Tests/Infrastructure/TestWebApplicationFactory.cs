@@ -45,6 +45,14 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 gustoSettings["Gusto:CompanyUuid"] = "company-uuid";
                 gustoSettings["Gusto:ApiVersion"] = "2026-06-15";
             }
+            else
+            {
+                gustoSettings["Gusto:BaseUrl"] = "";
+                gustoSettings["Gusto:ClientId"] = "";
+                gustoSettings["Gusto:ClientSecret"] = "";
+                gustoSettings["Gusto:RefreshToken"] = "";
+                gustoSettings["Gusto:CompanyUuid"] = "";
+            }
 
             configBuilder.AddInMemoryCollection(gustoSettings);
         });
