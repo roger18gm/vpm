@@ -263,11 +263,10 @@ public sealed class TimeWeeklyIntegrationTests : IClassFixture<BackendIntegratio
     {
         var owner = await BootstrapOwnerAsync();
         var (jobId, personId) = await SeedJobAsync(_fixture, owner);
-        var weekStart = CurrentWeekStartSunday();
         var tz = TimeZoneInfo.FindSystemTimeZoneById("America/Denver");
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date);
-        var start = TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(today.ToDateTime(new TimeOnly(8, 0)), DateTimeKind.Unspecified), tz);
+        var start = DateTimeOffset.UtcNow.AddMinutes(-15);
+        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(start, tz).Date);
+        var weekStart = localDate.AddDays(-(int)localDate.DayOfWeek).ToString("yyyy-MM-dd");
 
         await using var db = new AppDbContext(
             new DbContextOptionsBuilder<AppDbContext>()
@@ -288,7 +287,7 @@ public sealed class TimeWeeklyIntegrationTests : IClassFixture<BackendIntegratio
         db.TimeBreaks.Add(new TimeBreak
         {
             TimeEntryId = entry.Id,
-            BreakStartAt = start.AddMinutes(30),
+            BreakStartAt = start.AddMinutes(5),
             BreakType = "rest"
         });
         await db.SaveChangesAsync();
@@ -297,7 +296,7 @@ public sealed class TimeWeeklyIntegrationTests : IClassFixture<BackendIntegratio
         var sheet = await _fixture.Client.GetFromJsonAsync<WeeklyTimesheetDto>(
             $"/api/time/weekly?weekStart={weekStart}");
 
-        var todayRow = sheet!.Days.Single(d => d.Date == today.ToString("yyyy-MM-dd"));
+        var todayRow = sheet!.Days.Single(d => d.Date == localDate.ToString("yyyy-MM-dd"));
         var session = Assert.Single(todayRow.Sessions);
         Assert.True(session.InProgress);
         Assert.InRange(session.WorkMinutes, 1, 600);
