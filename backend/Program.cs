@@ -84,6 +84,7 @@ builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOpt
 builder.Services.AddHttpClient("Brevo");
 builder.Services.Configure<GustoOptions>(builder.Configuration.GetSection(GustoOptions.SectionName));
 builder.Services.AddSingleton<GustoAccessTokenCache>();
+builder.Services.AddScoped<IGustoRefreshTokenStore, GustoRefreshTokenStore>();
 builder.Services.AddHttpClient(GustoTimeClient.HttpClientName, client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);

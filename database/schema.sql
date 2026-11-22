@@ -313,6 +313,15 @@ create table if not exists gusto_employee_link (
 create unique index if not exists gusto_employee_link_company_employee_uidx
   on gusto_employee_link (company_id, gusto_employee_uuid);
 
+create table if not exists gusto_refresh_token (
+  id integer primary key,
+  refresh_token text not null,
+  updated_at timestamptz not null default now(),
+  constraint gusto_refresh_token_one_row check (id = 1)
+);
+
+alter table gusto_refresh_token enable row level security;
+
 create table if not exists gusto_time_sheet_sync (
   time_entry_id integer primary key references time_entry (id) on delete cascade,
   gusto_time_sheet_uuid text,

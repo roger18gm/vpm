@@ -16,15 +16,18 @@ public sealed class GustoTimeClient : IGustoTimeClient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GustoOptions _options;
     private readonly GustoAccessTokenCache _cache;
+    private readonly IGustoRefreshTokenStore? _refreshTokens;
 
     public GustoTimeClient(
         IHttpClientFactory httpClientFactory,
         IOptions<GustoOptions> options,
-        GustoAccessTokenCache cache)
+        GustoAccessTokenCache cache,
+        IGustoRefreshTokenStore? refreshTokens = null)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
         _cache = cache;
+        _refreshTokens = refreshTokens;
     }
 
     public Task PrepareAsync(CancellationToken cancellationToken) =>
@@ -105,9 +108,38 @@ public sealed class GustoTimeClient : IGustoTimeClient
             return cached;
         }
 
-        if (forceRefresh)
+        await _cache.WaitForRefreshAsync(cancellationToken);
+        try
         {
-            _cache.Clear();
+            if (!forceRefresh && _cache.TryGet(DateTimeOffset.UtcNow, out cached))
+            {
+                return cached;
+            }
+
+            if (forceRefresh)
+            {
+                _cache.InvalidateAccessToken();
+            }
+
+            return await RequestTokenAsync(cancellationToken);
+        }
+        finally
+        {
+            _cache.ReleaseRefresh();
+        }
+    }
+
+    private async Task<string> RequestTokenAsync(CancellationToken cancellationToken)
+    {
+        var refreshToken = _cache.PeekRefreshToken();
+        if (string.IsNullOrWhiteSpace(refreshToken) && _refreshTokens is not null)
+        {
+            refreshToken = await _refreshTokens.GetAsync(cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            refreshToken = _options.RefreshToken;
         }
 
         var http = _httpClientFactory.CreateClient(HttpClientName);
@@ -120,7 +152,7 @@ public sealed class GustoTimeClient : IGustoTimeClient
                 {
                     client_id = _options.ClientId,
                     client_secret = _options.ClientSecret,
-                    refresh_token = _options.RefreshToken,
+                    refresh_token = refreshToken,
                     grant_type = "refresh_token"
                 },
                 cancellationToken);
@@ -170,6 +202,22 @@ public sealed class GustoTimeClient : IGustoTimeClient
 
             var expiresIn = payload.ExpiresIn <= 0 ? 7200 : payload.ExpiresIn;
             _cache.Set(payload.AccessToken, DateTimeOffset.UtcNow.AddSeconds(expiresIn));
+            if (!string.IsNullOrWhiteSpace(payload.RefreshToken))
+            {
+                _cache.RememberRefreshToken(payload.RefreshToken);
+                if (_refreshTokens is not null)
+                {
+                    try
+                    {
+                        await _refreshTokens.SaveAsync(payload.RefreshToken, cancellationToken);
+                    }
+                    catch (Exception)
+                    {
+                        // The replacement stays in memory for this process. Do not log the token.
+                    }
+                }
+            }
+
             return payload.AccessToken;
         }
     }
@@ -516,5 +564,8 @@ public sealed class GustoTimeClient : IGustoTimeClient
 
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
+
+        [JsonPropertyName("refresh_token")]
+        public string? RefreshToken { get; set; }
     }
 }

@@ -9,6 +9,8 @@ public sealed class StubGustoHandler : HttpMessageHandler
 
     public int TokenRequests { get; private set; }
 
+    public List<string> TokenRequestBodies { get; } = [];
+
     public List<string> TimeSheetBodies { get; } = [];
 
     public List<string?> TimeSheetAuthorization { get; } = [];
@@ -74,6 +76,7 @@ public sealed class StubGustoHandler : HttpMessageHandler
         lock (_gate)
         {
             TokenRequests = 0;
+            TokenRequestBodies.Clear();
             TimeSheetBodies.Clear();
             TimeSheetAuthorization.Clear();
             TimeSheetApiVersions.Clear();
@@ -114,9 +117,13 @@ public sealed class StubGustoHandler : HttpMessageHandler
         var path = request.RequestUri?.AbsolutePath ?? "";
         if (path.EndsWith("/oauth/token", StringComparison.Ordinal))
         {
+            var tokenRequestBody = request.Content is null
+                ? ""
+                : await request.Content.ReadAsStringAsync(cancellationToken);
             lock (_gate)
             {
                 TokenRequests++;
+                TokenRequestBodies.Add(tokenRequestBody);
             }
 
             if (TokenFailure is not null)

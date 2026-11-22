@@ -174,6 +174,10 @@ Fields:
 
 One `gusto_employee_uuid` belongs to one person inside a company (`gusto_employee_link_company_employee_uidx`).
 
+### `gusto_refresh_token`
+
+The latest Gusto company refresh token. Gusto invalidates a refresh token after one use and returns a replacement. One row, `id = 1`. Row level security is enabled and there is no public policy. The API connection reads and writes the row.
+
 ### `gusto_time_sheet_sync`
 One send attempt for one `time_entry`. `status` is `pending`, `synced`, or `failed`.
 

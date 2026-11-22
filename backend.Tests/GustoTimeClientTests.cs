@@ -371,6 +371,39 @@ public sealed class GustoTimeClientTests
     }
 
     [Fact]
+    public async Task Refresh_uses_the_replacement_token_on_the_next_call()
+    {
+        var handler = new StubGustoHandler();
+        handler.TokenBody = """{"access_token":"token-1","token_type":"Bearer","expires_in":7200,"refresh_token":"rotated-refresh"}""";
+        var cache = new GustoAccessTokenCache();
+        var store = new RecordingRefreshTokenStore();
+        var client = CreateClient(handler, DemoOptions(), cache, store);
+
+        await client.PrepareAsync(CancellationToken.None);
+
+        cache.InvalidateAccessToken();
+        handler.TokenBody = """{"access_token":"token-2","token_type":"Bearer","expires_in":7200,"refresh_token":"rotated-again"}""";
+        await client.PrepareAsync(CancellationToken.None);
+
+        Assert.Contains("rotated-refresh", handler.TokenRequestBodies[1]);
+        Assert.DoesNotContain("refresh-token", handler.TokenRequestBodies[1]);
+        Assert.Equal("rotated-again", store.Saved);
+    }
+
+    [Fact]
+    public async Task Refresh_prefers_the_stored_token_over_configuration()
+    {
+        var handler = new StubGustoHandler();
+        var store = new RecordingRefreshTokenStore { Current = "from-store" };
+        var client = CreateClient(handler, DemoOptions(), refreshTokens: store);
+
+        await client.PrepareAsync(CancellationToken.None);
+
+        Assert.Contains("from-store", handler.TokenRequestBodies.Single());
+        Assert.DoesNotContain("refresh-token", handler.TokenRequestBodies.Single());
+    }
+
+    [Fact]
     public async Task CreateFlow_rejects_a_non_demo_api_host_before_http()
     {
         var handler = new StubGustoHandler();
@@ -402,10 +435,31 @@ public sealed class GustoTimeClientTests
     private static GustoTimeClient CreateClient(
         StubGustoHandler handler,
         GustoOptions options,
-        GustoAccessTokenCache? cache = null)
+        GustoAccessTokenCache? cache = null,
+        IGustoRefreshTokenStore? refreshTokens = null)
     {
         var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
-        return new GustoTimeClient(new SingleHttpClientFactory(http), Options.Create(options), cache ?? new GustoAccessTokenCache());
+        return new GustoTimeClient(
+            new SingleHttpClientFactory(http),
+            Options.Create(options),
+            cache ?? new GustoAccessTokenCache(),
+            refreshTokens);
+    }
+
+    private sealed class RecordingRefreshTokenStore : IGustoRefreshTokenStore
+    {
+        public string? Current { get; set; }
+
+        public string? Saved { get; private set; }
+
+        public Task<string?> GetAsync(CancellationToken cancellationToken) => Task.FromResult(Current);
+
+        public Task SaveAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            Saved = refreshToken;
+            Current = refreshToken;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class SingleHttpClientFactory(HttpClient client) : IHttpClientFactory

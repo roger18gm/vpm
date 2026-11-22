@@ -50,6 +50,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<GustoEmployeeLink> GustoEmployeeLinks => Set<GustoEmployeeLink>();
 
+    public DbSet<GustoRefreshToken> GustoRefreshTokens => Set<GustoRefreshToken>();
+
     public DbSet<GustoTimeSheetSync> GustoTimeSheetSyncs => Set<GustoTimeSheetSync>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -321,6 +323,15 @@ public sealed class AppDbContext : DbContext
             entity.Property(row => row.FollowUpSentAt).HasColumnName("follow_up_sent_at");
             entity.HasIndex(row => row.TimeBreakId).IsUnique().HasFilter("time_break_id is not null");
             entity.HasIndex(row => row.TimeEntryId).IsUnique().HasFilter("time_entry_id is not null");
+        });
+
+        modelBuilder.Entity<GustoRefreshToken>(entity =>
+        {
+            entity.ToTable("gusto_refresh_token");
+            entity.HasKey(token => token.Id);
+            entity.Property(token => token.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(token => token.RefreshToken).HasColumnName("refresh_token");
+            entity.Property(token => token.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<GustoEmployeeLink>(entity =>

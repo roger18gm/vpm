@@ -30,6 +30,19 @@ public sealed class GustoEmployeeLinkIntegrationTests : IClassFixture<BackendInt
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
+    public async Task Gusto_refresh_token_round_trips()
+    {
+        await using var db = CreateDb();
+        var store = new GustoRefreshTokenStore(db);
+
+        Assert.Null(await store.GetAsync(CancellationToken.None));
+        await store.SaveAsync("rotated-refresh", CancellationToken.None);
+        Assert.Equal("rotated-refresh", await store.GetAsync(CancellationToken.None));
+        await store.SaveAsync("rotated-again", CancellationToken.None);
+        Assert.Equal("rotated-again", await store.GetAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Duplicate_employee_uuid_in_one_company_is_rejected()
     {
         var owner = await BootstrapOwnerAsync();
