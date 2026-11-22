@@ -58,6 +58,16 @@ public sealed class GustoTimeClient : IGustoTimeClient
         }
     }
 
+    public async Task<string> CreateFlowAsync(string flowType, CancellationToken cancellationToken)
+    {
+        var companyUuid = Uri.EscapeDataString(_options.CompanyUuid.Trim());
+        var body = await PostDemoJsonAsync(
+            $"/v1/companies/{companyUuid}/flows",
+            new { flow_type = flowType },
+            cancellationToken);
+        return ReadFlowUrl(body);
+    }
+
     public async Task<IReadOnlyList<GustoDirectoryEmployee>> ListEmployeesAsync(CancellationToken cancellationToken)
     {
         var employees = new List<GustoDirectoryEmployee>();
@@ -286,6 +296,86 @@ public sealed class GustoTimeClient : IGustoTimeClient
         }
 
         throw new GustoNotConfiguredException();
+    }
+
+    private async Task<string> PostDemoJsonAsync(
+        string relativeUrl,
+        object payload,
+        CancellationToken cancellationToken)
+    {
+        var token = await GetTokenAsync(forceRefresh: false, cancellationToken);
+        var (status, body) = await SendJsonAsync(HttpMethod.Post, token, relativeUrl, payload, cancellationToken);
+        if (status == (int)System.Net.HttpStatusCode.Unauthorized)
+        {
+            token = await GetTokenAsync(forceRefresh: true, cancellationToken);
+            (status, body) = await SendJsonAsync(HttpMethod.Post, token, relativeUrl, payload, cancellationToken);
+        }
+
+        if (status == (int)System.Net.HttpStatusCode.UnprocessableEntity)
+        {
+            throw new GustoFlowNotReadyException();
+        }
+
+        if (status is < 200 or >= 300)
+        {
+            throw new GustoNotConfiguredException();
+        }
+
+        return body;
+    }
+
+    private async Task<(int Status, string Body)> SendJsonAsync(
+        HttpMethod method,
+        string token,
+        string relativeUrl,
+        object? payload,
+        CancellationToken cancellationToken)
+    {
+        var http = _httpClientFactory.CreateClient(HttpClientName);
+        using var message = new HttpRequestMessage(method, $"{_options.BaseUrl.Trim().TrimEnd('/')}{relativeUrl}");
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        message.Headers.TryAddWithoutValidation("X-Gusto-API-Version", _options.ApiVersion);
+        if (payload is not null)
+        {
+            message.Content = JsonContent.Create(payload);
+        }
+
+        try
+        {
+            using var response = await http.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ((int)response.StatusCode, body);
+        }
+        catch (HttpRequestException)
+        {
+            throw new GustoNotConfiguredException();
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GustoNotConfiguredException();
+        }
+    }
+
+    private static string ReadFlowUrl(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("url", out var urlValue)
+                || urlValue.ValueKind != JsonValueKind.String
+                || !Uri.TryCreate(urlValue.GetString(), UriKind.Absolute, out var url)
+                || url.Scheme != Uri.UriSchemeHttps
+                || !string.Equals(url.Host, "flows.gusto-demo.com", StringComparison.Ordinal))
+            {
+                throw new GustoNotConfiguredException();
+            }
+
+            return url.AbsoluteUri;
+        }
+        catch (JsonException)
+        {
+            throw new GustoNotConfiguredException();
+        }
     }
 
     private async Task<string> GetDemoJsonAsync(string relativeUrl, CancellationToken cancellationToken)

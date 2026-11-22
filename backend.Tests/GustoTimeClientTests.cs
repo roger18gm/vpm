@@ -290,6 +290,74 @@ public sealed class GustoTimeClientTests
             client.ListEmployeesAsync(CancellationToken.None));
     }
 
+    [Fact]
+    public async Task CreateFlow_posts_add_employees_and_returns_the_demo_flow_url()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowBody = """{"url":"https://flows.gusto-demo.com/flows/abc"}""";
+        var client = CreateClient(handler, DemoOptions());
+
+        var url = await client.CreateFlowAsync("add_employees", CancellationToken.None);
+
+        Assert.Equal("https://flows.gusto-demo.com/flows/abc", url);
+        Assert.Single(handler.FlowRequestUris);
+        Assert.EndsWith("/v1/companies/company-uuid/flows", new Uri(handler.FlowRequestUris[0]).AbsolutePath, StringComparison.Ordinal);
+        Assert.Contains("\"flow_type\":\"add_employees\"", handler.FlowBodies.Single());
+        Assert.Equal("Bearer token-1", handler.FlowAuthorization.Single());
+        Assert.Equal("2026-06-15", handler.FlowApiVersions.Single());
+    }
+
+    [Fact]
+    public async Task CreateFlow_refreshes_once_after_401_and_returns_the_second_url()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowStatuses.Enqueue(401);
+        handler.FlowBody = """{"url":"https://flows.gusto-demo.com/flows/retry"}""";
+        var client = CreateClient(handler, DemoOptions());
+
+        var url = await client.CreateFlowAsync("company_onboarding", CancellationToken.None);
+
+        Assert.Equal("https://flows.gusto-demo.com/flows/retry", url);
+        Assert.Equal(2, handler.TokenRequests);
+        Assert.Equal(2, handler.FlowBodies.Count);
+    }
+
+    [Fact]
+    public async Task CreateFlow_422_throws_not_ready()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowStatuses.Enqueue(422);
+        var client = CreateClient(handler, DemoOptions());
+
+        var error = await Assert.ThrowsAsync<GustoFlowNotReadyException>(() =>
+            client.CreateFlowAsync("add_employees", CancellationToken.None));
+
+        Assert.Equal("The Gusto company is not ready for employees.", error.Message);
+    }
+
+    [Fact]
+    public async Task CreateFlow_rejects_a_url_on_another_host()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowBody = """{"url":"https://evil.example/flows/abc"}""";
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.CreateFlowAsync("add_employees", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateFlow_rejects_a_non_demo_api_host_before_http()
+    {
+        var handler = new StubGustoHandler();
+        var client = CreateClient(handler, DemoOptions("https://api.gusto.com"));
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.CreateFlowAsync("add_employees", CancellationToken.None));
+        Assert.Equal(0, handler.TokenRequests);
+        Assert.Empty(handler.FlowRequestUris);
+    }
+
     private static string EmployeePage(int count)
     {
         var builder = new StringBuilder("[");

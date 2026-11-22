@@ -55,6 +55,20 @@ public sealed class StubGustoHandler : HttpMessageHandler
 
     public Exception? JobFailure { get; set; }
 
+    public List<string> FlowBodies { get; } = [];
+
+    public List<string> FlowRequestUris { get; } = [];
+
+    public List<string?> FlowAuthorization { get; } = [];
+
+    public List<string?> FlowApiVersions { get; } = [];
+
+    public Queue<int> FlowStatuses { get; } = new();
+
+    public string FlowBody { get; set; } = """{"url":"https://flows.gusto-demo.com/flows/stub"}""";
+
+    public Exception? FlowFailure { get; set; }
+
     public void Reset()
     {
         lock (_gate)
@@ -83,6 +97,13 @@ public sealed class StubGustoHandler : HttpMessageHandler
             JobAuthorization.Clear();
             JobApiVersions.Clear();
             JobFailure = null;
+            FlowBodies.Clear();
+            FlowRequestUris.Clear();
+            FlowAuthorization.Clear();
+            FlowApiVersions.Clear();
+            FlowStatuses.Clear();
+            FlowBody = """{"url":"https://flows.gusto-demo.com/flows/stub"}""";
+            FlowFailure = null;
         }
     }
 
@@ -139,6 +160,33 @@ public sealed class StubGustoHandler : HttpMessageHandler
                 bodies: null,
                 fallback,
                 JobFailure);
+        }
+
+        if (request.Method == HttpMethod.Post && path.EndsWith("/flows", StringComparison.Ordinal))
+        {
+            var flowRequestBody = request.Content is null
+                ? ""
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+            int flowStatus;
+            Exception? flowFailure;
+            string flowResponseBody;
+            lock (_gate)
+            {
+                FlowBodies.Add(flowRequestBody);
+                FlowRequestUris.Add(request.RequestUri?.ToString() ?? "");
+                FlowAuthorization.Add(request.Headers.Authorization?.ToString());
+                FlowApiVersions.Add(Header(request, "X-Gusto-API-Version"));
+                flowStatus = FlowStatuses.Count > 0 ? FlowStatuses.Dequeue() : 201;
+                flowFailure = FlowFailure;
+                flowResponseBody = FlowBody;
+            }
+
+            if (flowFailure is not null)
+            {
+                throw flowFailure;
+            }
+
+            return Json((HttpStatusCode)flowStatus, flowResponseBody);
         }
 
         var body = request.Content is null

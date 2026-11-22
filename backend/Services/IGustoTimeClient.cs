@@ -9,6 +9,8 @@ public interface IGustoTimeClient
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<GustoDirectoryEmployee>> ListEmployeesAsync(CancellationToken cancellationToken);
+
+    Task<string> CreateFlowAsync(string flowType, CancellationToken cancellationToken);
 }
 
 public sealed record GustoTimeSheetRequest(

@@ -37,3 +37,11 @@ public sealed class GustoNotConfiguredException : Exception
     {
     }
 }
+
+public sealed class GustoFlowNotReadyException : Exception
+{
+    public GustoFlowNotReadyException()
+        : base("The Gusto company is not ready for employees.")
+    {
+    }
+}
