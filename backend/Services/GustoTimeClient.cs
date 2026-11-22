@@ -361,7 +361,8 @@ public sealed class GustoTimeClient : IGustoTimeClient
         try
         {
             using var document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("url", out var urlValue)
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty("url", out var urlValue)
                 || urlValue.ValueKind != JsonValueKind.String
                 || !Uri.TryCreate(urlValue.GetString(), UriKind.Absolute, out var url)
                 || url.Scheme != Uri.UriSchemeHttps

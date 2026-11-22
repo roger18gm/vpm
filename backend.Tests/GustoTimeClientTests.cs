@@ -347,6 +347,17 @@ public sealed class GustoTimeClientTests
     }
 
     [Fact]
+    public async Task CreateFlow_rejects_a_non_object_flow_response()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowBody = "[]";
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.CreateFlowAsync("add_employees", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task CreateFlow_rejects_a_non_demo_api_host_before_http()
     {
         var handler = new StubGustoHandler();
