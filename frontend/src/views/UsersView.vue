@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Icon } from "@iconify/vue";
+import { ApiRequestError } from "@/lib/api";
 import { capturePostHogEvent } from "@/lib/posthog";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import CreateUserModal from "@/components/user/CreateUserModal.vue";
@@ -18,6 +19,7 @@ const roleErrors = ref<Record<number, string>>({});
 const onboarding = ref(false);
 const onboardingError = ref("");
 const companySetup = ref(false);
+const awaitingGustoReturn = ref(false);
 
 const roleOptions = computed(() => {
   const roles = ["crew", "manager", "admin"];
@@ -31,25 +33,33 @@ async function openFlow(flowType: "add_employees" | "company_onboarding") {
   onboarding.value = true;
   onboardingError.value = "";
   companySetup.value = false;
+  const tab = window.open("", "_blank");
+  if (!tab) {
+    onboardingError.value = "Allow pop-ups to open Gusto.";
+    onboarding.value = false;
+    return;
+  }
+  tab.opener = null;
   try {
     const url = await usersStore.openGustoOnboarding(flowType);
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      onboardingError.value = "Allow pop-ups to open Gusto.";
-    }
+    tab.location.replace(url);
+    awaitingGustoReturn.value = true;
   } catch (err) {
+    tab.close();
     const message = err instanceof Error ? err.message : "The Gusto demo is not configured or could not be reached.";
     onboardingError.value = message;
-    companySetup.value = message === "The Gusto company is not ready for employees.";
+    companySetup.value = flowType === "add_employees" && err instanceof ApiRequestError && err.status === 422;
   } finally {
     onboarding.value = false;
   }
 }
 
 function reloadDirectoryOnReturn() {
-  if (document.visibilityState === "visible") {
-    void usersStore.fetchGustoDirectory();
+  if (document.visibilityState !== "visible" || !awaitingGustoReturn.value) {
+    return;
   }
+  awaitingGustoReturn.value = false;
+  void usersStore.fetchGustoDirectory();
 }
 
 onMounted(() => {

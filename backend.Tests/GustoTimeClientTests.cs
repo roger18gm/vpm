@@ -323,6 +323,19 @@ public sealed class GustoTimeClientTests
     }
 
     [Fact]
+    public async Task CreateFlow_second_401_throws_not_configured()
+    {
+        var handler = new StubGustoHandler();
+        handler.FlowStatuses.Enqueue(401);
+        handler.FlowStatuses.Enqueue(401);
+        var client = CreateClient(handler, DemoOptions());
+
+        await Assert.ThrowsAsync<GustoNotConfiguredException>(() =>
+            client.CreateFlowAsync("add_employees", CancellationToken.None));
+        Assert.Equal(2, handler.TokenRequests);
+    }
+
+    [Fact]
     public async Task CreateFlow_422_throws_not_ready()
     {
         var handler = new StubGustoHandler();
