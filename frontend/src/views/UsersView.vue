@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Icon } from "@iconify/vue";
 import { capturePostHogEvent } from "@/lib/posthog";
 import PageHeader from "@/components/layout/PageHeader.vue";
@@ -15,6 +15,9 @@ const auth = useAuthStore();
 const usersStore = useUsersStore();
 const showCreate = ref(false);
 const roleErrors = ref<Record<number, string>>({});
+const onboarding = ref(false);
+const onboardingError = ref("");
+const companySetup = ref(false);
 
 const roleOptions = computed(() => {
   const roles = ["crew", "manager", "admin"];
@@ -24,9 +27,39 @@ const roleOptions = computed(() => {
   return roles;
 });
 
+async function openFlow(flowType: "add_employees" | "company_onboarding") {
+  onboarding.value = true;
+  onboardingError.value = "";
+  companySetup.value = false;
+  try {
+    const url = await usersStore.openGustoOnboarding(flowType);
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      onboardingError.value = "Allow pop-ups to open Gusto.";
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "The Gusto demo is not configured or could not be reached.";
+    onboardingError.value = message;
+    companySetup.value = message === "The Gusto company is not ready for employees.";
+  } finally {
+    onboarding.value = false;
+  }
+}
+
+function reloadDirectoryOnReturn() {
+  if (document.visibilityState === "visible") {
+    void usersStore.fetchGustoDirectory();
+  }
+}
+
 onMounted(() => {
   void usersStore.fetchUsers();
   void usersStore.fetchGustoDirectory();
+  document.addEventListener("visibilitychange", reloadDirectoryOnReturn);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("visibilitychange", reloadDirectoryOnReturn);
 });
 
 function onGustoSaved(link: GustoEmployeeLink) {
@@ -85,6 +118,9 @@ async function onCreated() {
 <template>
   <PageHeader title="Users" subtitle="Manage login accounts for your company">
     <template #actions>
+      <VpButton variant="secondary" :disabled="onboarding" @click="openFlow('add_employees')">
+        Onboard in Gusto
+      </VpButton>
       <VpButton @click="showCreate = true">
         <span class="inline-flex items-center gap-1">
           <Icon icon="mdi:plus" />
@@ -93,6 +129,19 @@ async function onCreated() {
       </VpButton>
     </template>
   </PageHeader>
+
+  <p v-if="onboardingError" class="text-sm text-error mb-3">
+    {{ onboardingError }}
+    <button
+      v-if="companySetup"
+      type="button"
+      class="underline ml-2"
+      :disabled="onboarding"
+      @click="openFlow('company_onboarding')"
+    >
+      Set up the Gusto company
+    </button>
+  </p>
 
   <p v-if="usersStore.gustoDirectoryError" class="text-sm text-error mb-3">{{ usersStore.gustoDirectoryError }}</p>
 

@@ -119,6 +119,18 @@ export const useUsersStore = defineStore("users", () => {
     return normalizeLink(raw);
   }
 
+  async function openGustoOnboarding(flowType: "add_employees" | "company_onboarding"): Promise<string> {
+    const raw = await request<Record<string, unknown>>("/users/gusto-onboarding", {
+      method: "POST",
+      body: JSON.stringify({ flowType }),
+    });
+    const url = String(raw.url ?? raw.Url ?? "");
+    if (!url.startsWith("https://flows.gusto-demo.com/")) {
+      throw new Error("The Gusto demo is not configured or could not be reached.");
+    }
+    return url;
+  }
+
   async function createUser(input: CreateUserInput): Promise<UserAdmin> {
     const raw = await request<Record<string, unknown>>("/users", {
       method: "POST",
@@ -150,6 +162,7 @@ export const useUsersStore = defineStore("users", () => {
     fetchGustoDirectory,
     rememberGustoLink,
     saveGustoLink,
+    openGustoOnboarding,
     createUser,
     updateRole,
   };
