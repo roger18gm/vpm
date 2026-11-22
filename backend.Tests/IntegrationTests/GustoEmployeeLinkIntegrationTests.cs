@@ -252,6 +252,100 @@ public sealed class GustoEmployeeLinkIntegrationTests : IClassFixture<BackendInt
     }
 
     [Fact]
+    public async Task Owner_receives_a_demo_onboarding_url()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.FlowBody = """{"url":"https://flows.gusto-demo.com/flows/owner"}""";
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/users/gusto-onboarding",
+            new GustoOnboardingRequest("add_employees"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<GustoOnboardingDto>();
+        Assert.Equal("https://flows.gusto-demo.com/flows/owner", body!.Url);
+        Assert.Contains("\"flow_type\":\"add_employees\"", handler.FlowBodies.Single());
+    }
+
+    [Fact]
+    public async Task Unknown_flow_type_is_400_and_does_not_call_gusto()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/users/gusto-onboarding",
+            new GustoOnboardingRequest("employee_self_management"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Choose a Gusto onboarding flow.", await response.Content.ReadAsStringAsync());
+        Assert.Empty(handler.FlowRequestUris);
+    }
+
+    [Fact]
+    public async Task Manager_cannot_open_onboarding()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var managerEmail = $"manager-{Guid.NewGuid():N}@example.com";
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+        using var create = await _fixture.Client.PostAsJsonAsync("/api/users", new CreateUserRequest(
+            "Demo Manager",
+            managerEmail,
+            "Password123!",
+            "manager"));
+        create.EnsureSuccessStatusCode();
+        var manager = await _fixture.AuthClient.LoginAsync(new LoginRequest(managerEmail, "Password123!"));
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        _fixture.AuthClient.SetBearerToken(manager.AccessToken);
+
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/users/gusto-onboarding",
+            new GustoOnboardingRequest("add_employees"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("Only owners and admins can manage users.", await response.Content.ReadAsStringAsync());
+        Assert.Empty(handler.FlowRequestUris);
+        Assert.Equal(0, handler.TokenRequests);
+    }
+
+    [Fact]
+    public async Task Add_employees_422_tells_the_admin_the_company_is_not_ready()
+    {
+        var owner = await BootstrapOwnerAsync();
+        var handler = _fixture.Factory.Services.GetRequiredService<StubGustoHandler>();
+        handler.FlowStatuses.Enqueue(422);
+        _fixture.AuthClient.SetBearerToken(owner.AccessToken);
+
+        var response = await _fixture.Client.PostAsJsonAsync(
+            "/api/users/gusto-onboarding",
+            new GustoOnboardingRequest("add_employees"));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.Contains("The Gusto company is not ready for employees.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Missing_gusto_configuration_returns_503_for_onboarding()
+    {
+        var owner = await BootstrapOwnerAsync();
+        await using var factory = new TestWebApplicationFactory(_fixture.Database.ConnectionString, gustoConfigured: false);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", owner.AccessToken);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/users/gusto-onboarding",
+            new GustoOnboardingRequest("company_onboarding"));
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("not configured", await response.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, factory.Services.GetRequiredService<StubGustoHandler>().TokenRequests);
+    }
+
+    [Fact]
     public async Task Inactive_member_and_manager_cannot_save()
     {
         var owner = await BootstrapOwnerAsync();

@@ -221,6 +221,10 @@ public sealed record GustoEmployeeDirectoryDto(
 
 public sealed record SaveGustoEmployeeLinkRequest(string? GustoEmployeeUuid, string? GustoJobUuid);
 
+public sealed record GustoOnboardingRequest(string? FlowType);
+
+public sealed record GustoOnboardingDto(string Url);
+
 public sealed record JobAreaDto(
     int Id,
     int JobId,

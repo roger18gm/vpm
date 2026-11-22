@@ -42,6 +42,37 @@ public sealed class GustoEmployeeLinkService
         }
     }
 
+    public async Task<(GustoOnboardingDto? Result, string? Error, int StatusCode)> CreateOnboardingAsync(
+        CurrentUserContext user,
+        string? flowType,
+        CancellationToken cancellationToken)
+    {
+        if (!_authorization.IsAdmin(user))
+        {
+            return (null, "Only owners and admins can manage users.", 403);
+        }
+
+        var requested = flowType?.Trim() ?? "";
+        if (requested is not ("add_employees" or "company_onboarding"))
+        {
+            return (null, "Choose a Gusto onboarding flow.", 400);
+        }
+
+        try
+        {
+            var url = await _gusto.CreateFlowAsync(requested, cancellationToken);
+            return (new GustoOnboardingDto(url), null, 200);
+        }
+        catch (GustoFlowNotReadyException ex)
+        {
+            return (null, ex.Message, 422);
+        }
+        catch (GustoNotConfiguredException ex)
+        {
+            return (null, ex.Message, 503);
+        }
+    }
+
     public async Task<(GustoEmployeeLinkDto? Result, string? Error, int StatusCode)> SaveAsync(
         CurrentUserContext user,
         int personId,
