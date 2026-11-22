@@ -25,7 +25,7 @@ An owner or admin links each active company member to one onboarded, active Gust
 | One employee, one user | Inside one VisionPaint company, one `gusto_employee_uuid` belongs to one person. The 409 names the person who already has it |
 | Pay | Rate, payment unit, and compensation objects are dropped before the browser response is built |
 
-This replaces the "seeded rows, no linking screen" decision in the time-sync spec. Pasting Gusto ids is still out of scope. Creating Gusto employees is still out of scope.
+This replaces the "seeded rows, no linking screen" decision in the time-sync spec. Pasting Gusto ids is still out of scope. Creating Gusto employees inside VisionPaint forms is still out of scope. Hosted onboarding is specified in [2026-11-21-gusto-employee-onboarding-design.md](2026-11-21-gusto-employee-onboarding-design.md).
 
 ## Boundary
 
@@ -178,4 +178,4 @@ When this is implemented, point the Users row in `docs/design/screen-map.md` and
 
 ## Out of scope
 
-Creating Gusto employees, pasting uuids, unlinking, matching by email, live Gusto, overtime, payroll sync, webhooks, and updating a time sheet Gusto has already accepted.
+Creating Gusto employees in VisionPaint forms, pasting uuids, unlinking, matching by email, live Gusto, overtime, payroll sync, webhooks, and updating a time sheet Gusto has already accepted.
